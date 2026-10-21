@@ -2,6 +2,7 @@
 const vscode = require("vscode");
 const fs = require("fs");
 const path = require("path");
+const os = require("os");
 const crypto = require("crypto");
 const { execFile } = require("child_process");
 const lib = require("./lib");
@@ -212,6 +213,27 @@ function terminal(raiz, dir, comandos) {
   });
   term.show();
   term.sendText(lib.juntar(comandos, shell));
+}
+
+function atualizarExtensao() {
+  const shell = vscode.env.shell || "";
+  const pasta = path.join(os.tmpdir(), `sdd-speckit-${Date.now()}`);
+  const editor = (vscode.env.appName || "").includes("Cursor") ? "cursor" : "code";
+  const pastaShell = lib.ehCmd(shell) ? pasta.replace(/\//g, "\\") : pasta.replace(/\\/g, "/");
+  const filtro = lib.ehCmd(shell) ? '"sdd-speckit-*.vsix"' : "'sdd-speckit-*.vsix'";
+  const gh = `gh release download -R Desenvolve-MT/sdd-vscode -p ${filtro} -D "${pastaShell}" --clobber`;
+  let instalar;
+  if (lib.ehPowerShell(shell)) {
+    instalar = `Get-ChildItem "${pastaShell}" -Filter *.vsix | ForEach-Object { ${editor} --install-extension $_.FullName --force }`;
+  } else if (lib.ehCmd(shell)) {
+    instalar = `for %f in ("${pastaShell}\\*.vsix") do ${editor} --install-extension "%~f" --force`;
+  } else {
+    instalar = `for f in "${pastaShell}"/*.vsix; do ${editor} --install-extension "$f" --force; done`;
+  }
+  terminal(os.tmpdir(), null, [`mkdir "${pastaShell}"`, gh, instalar]);
+  vscode.window.showInformationMessage("Quando o terminal terminar, recarregue a janela.", "Recarregar").then((escolha) => {
+    if (escolha === "Recarregar") vscode.commands.executeCommand("workbench.action.reloadWindow");
+  });
 }
 
 const agenteConfig = () => vscode.workspace.getConfiguration("sdd").get("agente") || "claude";
@@ -985,6 +1007,7 @@ function activate(ctx) {
       status.atualizar();
       form.enviarRepos();
     }),
+    vscode.commands.registerCommand("sdd.atualizarExtensao", atualizarExtensao),
     vscode.commands.registerCommand("sdd.configurarLayout", () => vscode.commands.executeCommand("workbench.action.openSettings", "sdd.layout")),
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (!e.affectsConfiguration("sdd.layout")) return;

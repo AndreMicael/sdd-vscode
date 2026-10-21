@@ -263,4 +263,5 @@ function juntar(comandos, shell) {
 module.exports = {
   contarTarefas, etapa, etapaDeArquivos, listarFeatures, featuresOutrasBranches, featureAtual, branchAtual, trilha, repositorios, proximoNumero, slug,
   comandoAgente, juntar, AGENTES, agente, invocacao, integracoes, workspaceDaUrl, lerClickUp, salvarClickUp,
+  ehCmd, ehPowerShell,
 };

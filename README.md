@@ -5,6 +5,9 @@ comandos: mostra em que passo cada feature está, explica cada passo e chama a I
 
 ## Instalar
 
+1. Baixe ou clone este repositorio e clique duas vezes em **instalar.cmd** (requer o `gh` logado com acesso a `Desenvolve-MT`).
+   Para atualizar, clique no botao de nuvem no painel **Features** ou execute **SDD: Atualizar extensao**.
+
 1. Baixe o `sdd-speckit-X.Y.Z.vsix` da última **Release** deste repositório
    (ou: `gh release download -R Desenvolve-MT/sdd-vscode -p "*.vsix"`).
 2. Instale:
