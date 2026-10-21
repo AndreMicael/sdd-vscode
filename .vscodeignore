@@ -2,3 +2,9 @@ test.js
 .gitignore
 *.vsix
 instalar.cmd
+# Arquivos de desenvolvimento (Spec Kit e agentes) não vão no pacote
+.claude/**
+.cursor/**
+.agents/**
+.specify/**
+specs/**

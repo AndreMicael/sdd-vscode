@@ -61,11 +61,16 @@ skills do Spec Kit; a extensão só organiza e chama.
 ## Configuração
 
 - `sdd.agente`: IA padrão (`claude`, `cursor`, `codex`, `opencode`, `agy`). O seletor do painel grava aqui.
+- `sdd.reaproveitarTerminal`: quando ligada, envia o próximo passo da feature para o terminal já aberto para ela (e na mesma sessão da IA, se ainda estiver ativa) e mostra no painel quando o passo termina.
 - `sdd.listaClickUp`: lista sugerida em “Enviar ao ClickUp” (só Claude Code e Cursor têm essa skill).
 - `sdd.layout.colunas`: layout das webviews (`auto`, `1` ou `2`); `auto` usa duas colunas quando houver espaço.
 - `sdd.layout.densidade`: espaçamento (`confortavel` ou `compacta`).
 
 O botão de engrenagem **SDD: Layout do painel**, no título da view **Ação**, abre essas configurações diretamente.
+
+### Orquestracao (opcional)
+
+A orquestracao permite que o Claude Code delegue o trabalho pesado ao Codex, Cursor ou OpenCode usando as skills `/orq` ou `/orq-lazy`. Ligue no seletor do painel **Acao** ou em `sdd.orquestracao`; ela so vale com Claude Code nos passos Plan, Tasks, Analyze, Implement e Converge. O plugin instala as skills de `github.com/AndreMicael/orq-skill` pelo comando **SDD: Instalar skills de orquestracao (/orq)**. No fim, o Claude mostra a tabela de tokens por IA; o consumo do proprio Claude aparece digitando `/cost` no terminal.
 
 ### ClickUp (opcional)
 

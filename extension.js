@@ -5,6 +5,7 @@ const path = require("path");
 const os = require("os");
 const crypto = require("crypto");
 const { execFile } = require("child_process");
+const { promisify } = require("util");
 const lib = require("./lib");
 const wiki = require("./wiki");
 
@@ -59,12 +60,76 @@ function itemRepo(r) {
   return Object.assign(item, { tipo: "repo", raiz: r.dir, specKit: r.specKit });
 }
 
+/**
+ * @typedef {object} RegistroTerminal
+ * @property {vscode.Terminal} term
+ * @property {boolean} ocupado
+ * @property {string} raiz
+ * @property {string | null} dir
+ * @property {string} idIA
+ * @property {number} [abertoEm]
+ * @property {"andamento" | "concluido"} [status]
+ */
+
+/** @type {Map<string, RegistroTerminal>} */
+const terminaisFeature = new Map();
+
+/** @type {Map<string, "andamento" | "concluido">} */
+const statusPasso = new Map();
+
+let atualizarViewsStatus = () => {};
+
+const reaproveitarConfig = () => vscode.workspace.getConfiguration("sdd").get("reaproveitarTerminal", false);
+const chaveTerminal = (raiz, dir, idIA) => `${raiz}|${dir || "(nova)"}|${idIA}`;
+
+/**
+ * Busca o terminal registrado para `raiz + dir + idIA` ou adota o terminal "nova" de `raiz + idIA`
+ * se `dir` ainda não tem registro e `spec.md` nasceu depois da abertura daquele terminal.
+ */
+function obterTerminalFeature(raiz, dir, idIA) {
+  if (!dir) return undefined;
+  const chave = chaveTerminal(raiz, dir, idIA);
+  if (terminaisFeature.has(chave)) return terminaisFeature.get(chave);
+  const temAlgum = [...terminaisFeature.values()].some((r) => r.dir === dir);
+  const chaveNova = chaveTerminal(raiz, null, idIA);
+  const nova = terminaisFeature.get(chaveNova);
+  if (temAlgum || !nova || typeof nova.abertoEm !== "number") return undefined;
+  try {
+    if (fs.statSync(path.join(dir, "spec.md")).birthtimeMs >= nova.abertoEm) {
+      terminaisFeature.delete(chaveNova);
+      nova.dir = dir;
+      delete nova.abertoEm;
+      terminaisFeature.set(chave, nova);
+      if (nova.status && !statusPasso.has(dir)) statusPasso.set(dir, nova.status);
+      return nova;
+    }
+  } catch {
+    // spec.md ainda não existe: mantém como "(nova)".
+  }
+  return undefined;
+}
+
+const ROTULO_STATUS_PASSO = {
+  andamento: " · em andamento",
+  concluido: " · passo concluído",
+};
+
+function sufixoStatusPasso(raiz, dir) {
+  if (!reaproveitarConfig()) return "";
+  if (!statusPasso.has(dir)) {
+    for (const reg of terminaisFeature.values()) {
+      if (reg.raiz === raiz && !reg.dir) obterTerminalFeature(raiz, dir, reg.idIA);
+    }
+  }
+  return ROTULO_STATUS_PASSO[statusPasso.get(dir)] || "";
+}
+
 function itemFeature(raiz, nome) {
   const dir = path.join(raiz, "specs", nome);
   const etapa = lib.etapa(dir);
   const atual = lib.featureAtual(raiz) === dir;
   const item = new vscode.TreeItem(nome, vscode.TreeItemCollapsibleState.Collapsed);
-  item.description = etapa.rotulo + (atual ? " · atual" : "");
+  item.description = etapa.rotulo + (atual ? " · atual" : "") + sufixoStatusPasso(raiz, dir);
   item.tooltip = `${dir}\nPróximo passo: ${etapa.proximo ? PASSOS[etapa.proximo] : "—"}`;
   item.iconPath = new vscode.ThemeIcon(ICONES[etapa.id]);
   item.contextValue = "feature";
@@ -83,7 +148,19 @@ function itemFeatureOutraBranch(raiz, feature) {
 function itensArquivos(dir) {
   return fs
     .readdirSync(dir, { withFileTypes: true })
-    .sort((a, b) => Number(b.isDirectory()) - Number(a.isDirectory()) || a.name.localeCompare(b.name))
+    .sort((a, b) => {
+      if (a.isDirectory() || b.isDirectory()) {
+        return Number(b.isDirectory()) - Number(a.isDirectory()) || a.name.localeCompare(b.name);
+      }
+      const passoA = lib.passoDoArquivo(a.name);
+      const passoB = lib.passoDoArquivo(b.name);
+      if (passoA !== null || passoB !== null) {
+        if (passoA === null) return 1;
+        if (passoB === null) return -1;
+        if (passoA !== passoB) return passoA - passoB;
+      }
+      return a.name.localeCompare(b.name);
+    })
     .map((d) => {
       const alvo = path.join(dir, d.name);
       if (d.isDirectory()) {
@@ -93,9 +170,13 @@ function itensArquivos(dir) {
       }
       const arq = new vscode.TreeItem(vscode.Uri.file(alvo));
       arq.command = { command: "vscode.open", title: "Abrir", arguments: [vscode.Uri.file(alvo)] };
+      const passo = lib.passoDoArquivo(d.name);
+      if (passo !== null) {
+        arq.description = `Passo ${passo}`;
+      }
       if (d.name === "tasks.md") {
         const t = lib.contarTarefas(fs.readFileSync(alvo, "utf8"));
-        arq.description = `${t.feitas}/${t.total}`;
+        arq.description += ` · ${t.feitas}/${t.total}`;
       }
       return arq;
     });
@@ -168,7 +249,7 @@ class Status {
     const branch = lib.branchAtual(f.raiz);
     const topo = new vscode.TreeItem(f.nome, vscode.TreeItemCollapsibleState.None);
     topo.iconPath = new vscode.ThemeIcon("git-branch");
-    topo.description = path.basename(f.raiz) + (branch ? ` · branch ${branch}` : "");
+    topo.description = path.basename(f.raiz) + (branch ? ` · branch ${branch}` : "") + sufixoStatusPasso(f.raiz, f.dir);
     topo.contextValue = "featureStatus";
     Object.assign(topo, { raiz: f.raiz, dir: f.dir });
     const passos = lib.trilha(f.dir).map((p) => {
@@ -213,6 +294,7 @@ function terminal(raiz, dir, comandos) {
   });
   term.show();
   term.sendText(lib.juntar(comandos, shell));
+  return term;
 }
 
 /** Roda o instalar.ps1 que vai dentro do pacote (mesmo fluxo do instalar.cmd). */
@@ -228,6 +310,32 @@ function atualizarExtensao(extensaoDir) {
 }
 
 const agenteConfig = () => vscode.workspace.getConfiguration("sdd").get("agente") || "claude";
+
+async function instalarOrq() {
+  let tmp = "";
+  try {
+    tmp = fs.mkdtempSync(path.join(os.tmpdir(), "sdd-orq-"));
+    await vscode.window.withProgress(
+      { location: vscode.ProgressLocation.Notification, title: "Baixando skills /orq..." },
+      () => promisify(execFile)("git", ["clone", "--depth", "1", "https://github.com/AndreMicael/orq-skill", tmp], { timeout: 120000, windowsHide: true }),
+    );
+    const destino = path.join(os.homedir(), ".claude", "skills");
+    for (const entrada of fs.readdirSync(path.join(tmp, "skills"), { withFileTypes: true })) {
+      if (entrada.isDirectory()) fs.cpSync(path.join(tmp, "skills", entrada.name), path.join(destino, entrada.name), { recursive: true, force: true });
+    }
+    vscode.window.showInformationMessage("Skills /orq, /orq-lazy e /cursor-agent instaladas. Elas valem nas proximas sessoes do Claude Code.");
+    return true;
+  } catch (e) {
+    vscode.window.showErrorMessage("Nao foi possivel instalar as skills: " + (e instanceof Error ? e.message : String(e)));
+    return false;
+  } finally {
+    try {
+      if (tmp) fs.rmSync(tmp, { recursive: true, force: true });
+    } catch {
+      // Pasta temporária presa (antivírus/arquivo aberto) não deve virar erro para o usuário.
+    }
+  }
+}
 
 /**
  * Chama a IA escolhida com o comando do Spec Kit (`passo` = specify, plan...).
@@ -247,7 +355,59 @@ async function rodar(raiz, dir, passo, args, antes = [], id = agenteConfig()) {
     vscode.window.showInformationMessage("Quando a instalação terminar, clique de novo para rodar o comando.");
     return;
   }
-  terminal(raiz, dir, [...antes, lib.comandoAgente(a.exe, lib.invocacao(id, passo, args), vscode.env.shell)]);
+  const reaproveitar = reaproveitarConfig();
+  let prompt = lib.invocacao(id, passo, args);
+  if (reaproveitar) prompt = lib.comMarcador(prompt);
+  const modo = vscode.workspace.getConfiguration("sdd").get("orquestracao") || "desligada";
+  if (id === "claude" && lib.PASSOS_ORQ.includes(passo) && (modo === "orq" || modo === "orq-lazy")) {
+    if (!lib.skillInstalada(modo, os.homedir())) {
+      const escolha = await vscode.window.showWarningMessage(
+        `A skill /${modo} nao esta instalada nesta maquina. Instalar agora? (baixa de github.com/AndreMicael/orq-skill)`,
+        { modal: true },
+        "Instalar",
+        "Rodar sem orquestracao",
+      );
+      if (escolha === "Instalar") {
+        if (!(await instalarOrq())) return;
+      } else if (escolha !== "Rodar sem orquestracao") return;
+    }
+    if (lib.skillInstalada(modo, os.homedir())) prompt = lib.promptOrquestrado(modo, prompt);
+  }
+  const shell = vscode.env.shell;
+  if (!reaproveitar) {
+    terminal(raiz, dir, [...antes, lib.comandoAgente(a.exe, prompt, shell)]);
+    return;
+  }
+  if (dir) {
+    statusPasso.set(dir, "andamento");
+    atualizarViewsStatus();
+  }
+  const reg = obterTerminalFeature(raiz, dir, id);
+  const temShellIntegration = Boolean(
+    reg &&
+    /** @type {any} */ (reg.term).shellIntegration &&
+    typeof (/** @type {any} */ (vscode.window)).onDidStartTerminalShellExecution === "function",
+  );
+  if (reg && temShellIntegration) {
+    reg.term.show();
+    if (reg.ocupado) {
+      reg.term.sendText(prompt, false);
+      setTimeout(() => reg.term.sendText("\r", false), 150);
+    } else {
+      reg.term.sendText(lib.juntar([...antes, lib.comandoAgente(a.exe, prompt, shell)], shell));
+    }
+    return;
+  }
+  const abertoEm = Date.now();
+  const term = terminal(raiz, dir, [...antes, lib.comandoAgente(a.exe, prompt, shell)]);
+  terminaisFeature.set(chaveTerminal(raiz, dir, id), {
+    term,
+    ocupado: false,
+    raiz,
+    dir: dir || null,
+    idIA: id,
+    ...(dir ? {} : { abertoEm, status: "andamento" }),
+  });
 }
 
 /** Instala o Spec Kit no repositório (o init preserva uma constituição já existente). */
@@ -319,6 +479,7 @@ class Formulario {
       tipo: "repos",
       repos: listaRepos(),
       agente: agenteConfig(),
+      orquestracao: vscode.workspace.getConfiguration("sdd").get("orquestracao") || "desligada",
     });
   }
 
@@ -347,6 +508,10 @@ class Formulario {
   async receber(m) {
     if (m.tipo === "agente") {
       await vscode.workspace.getConfiguration("sdd").update("agente", m.agente, vscode.ConfigurationTarget.Global);
+      return;
+    }
+    if (m.tipo === "orquestracao") {
+      await vscode.workspace.getConfiguration("sdd").update("orquestracao", m.valor, vscode.ConfigurationTarget.Global);
       return;
     }
     if (m.tipo === "criar") {
@@ -775,6 +940,15 @@ function htmlForm(webview) {
   <select id="agente">
     ${Object.entries(lib.AGENTES).map(([id, a]) => `<option value="${id}">${a.nome}</option>`).join("")}
   </select>
+  <div id="bloco-orquestracao" class="oculto">
+    <label for="orquestracao">Orquestracao</label>
+    <select id="orquestracao">
+      <option value="desligada">Desligada</option>
+      <option value="orq">/orq - delega aos outros agentes</option>
+      <option value="orq-lazy">/orq-lazy - delega com mudanca minima</option>
+    </select>
+    <small class="dica">So com Claude Code, nos passos Plan a Converge.</small>
+  </div>
   </div>
   <div id="modo-nova" class="card">
     <h3>Nova feature</h3>
@@ -808,7 +982,10 @@ const el = (id) => document.getElementById(id);
 let repos = [];
 let passoAtual = null;
 let featureAtual = null;
-let agenteTocado = false;
+
+function atualizarOrquestracao() {
+  el("bloco-orquestracao").classList.toggle("oculto", el("agente").value !== "claude");
+}
 
 function erro(msg) { el("erro").textContent = msg || ""; }
 
@@ -854,7 +1031,9 @@ window.addEventListener("message", (e) => {
   if (m.tipo === "repos") {
     repos = m.repos || [];
     preencherRepos();
-    if (!agenteTocado && m.agente) el("agente").value = m.agente;
+    if (m.agente) el("agente").value = m.agente;
+    if (m.orquestracao) el("orquestracao").value = m.orquestracao;
+    atualizarOrquestracao();
   } else if (m.tipo === "nova") {
     mostrarNova(m.raiz);
   } else if (m.tipo === "passo") {
@@ -876,8 +1055,11 @@ function executar() {
 }
 
 el("agente").addEventListener("change", () => {
-  agenteTocado = true;
+  atualizarOrquestracao();
   vscode.postMessage({ tipo: "agente", agente: el("agente").value });
+});
+el("orquestracao").addEventListener("change", () => {
+  vscode.postMessage({ tipo: "orquestracao", valor: el("orquestracao").value });
 });
 el("criar").addEventListener("click", criar);
 el("executar").addEventListener("click", executar);
@@ -971,6 +1153,10 @@ function activate(ctx) {
   const arvore = new Arvore();
   const status = new Status();
   const form = new Formulario();
+  atualizarViewsStatus = () => {
+    arvore.atualizar();
+    status.atualizar();
+  };
   let espera;
   const atualizar = () => {
     clearTimeout(espera);
@@ -988,8 +1174,59 @@ function activate(ctx) {
   vigia.onDidChange(atualizar);
   vigia.onDidDelete(atualizar);
 
+  const win = /** @type {any} */ (vscode.window);
+  if (typeof win.onDidStartTerminalShellExecution === "function") {
+    ctx.subscriptions.push(
+      win.onDidStartTerminalShellExecution((e) => {
+        const reg = [...terminaisFeature.values()].find((r) => r.term === e.terminal);
+        if (!reg) return;
+        reg.ocupado = true;
+        if (typeof e.execution?.read !== "function") return;
+        (async () => {
+          let cauda = "";
+          try {
+            for await (const dado of e.execution.read()) {
+              const trecho = cauda + dado;
+              if (lib.temMarcador(trecho)) {
+                cauda = "";
+                if (!reg.dir) {
+                  for (const nome of lib.listarFeatures(reg.raiz)) {
+                    if (obterTerminalFeature(reg.raiz, path.join(reg.raiz, "specs", nome), reg.idIA) === reg) break;
+                  }
+                }
+                if (reg.dir && statusPasso.get(reg.dir) === "andamento") {
+                  statusPasso.set(reg.dir, "concluido");
+                  atualizar();
+                } else if (!reg.dir && reg.status === "andamento") {
+                  reg.status = "concluido";
+                }
+              } else {
+                cauda = trecho.slice(-64);
+              }
+            }
+          } catch {
+            // Leitura encerrada com o terminal ou execução.
+          }
+        })();
+      }),
+    );
+  }
+  if (typeof win.onDidEndTerminalShellExecution === "function") {
+    ctx.subscriptions.push(
+      win.onDidEndTerminalShellExecution((e) => {
+        const reg = [...terminaisFeature.values()].find((r) => r.term === e.terminal);
+        if (reg) reg.ocupado = false;
+      }),
+    );
+  }
+
   ctx.subscriptions.push(
     vigia,
+    vscode.window.onDidCloseTerminal((term) => {
+      for (const [chave, reg] of terminaisFeature) {
+        if (reg.term === term) terminaisFeature.delete(chave);
+      }
+    }),
     vscode.window.registerTreeDataProvider("sdd.features", arvore),
     vscode.window.registerTreeDataProvider("sdd.status", status),
     vscode.window.registerWebviewViewProvider("sdd.form", form, { webviewOptions: { retainContextWhenHidden: true } }),
@@ -999,8 +1236,15 @@ function activate(ctx) {
       form.enviarRepos();
     }),
     vscode.commands.registerCommand("sdd.atualizarExtensao", () => atualizarExtensao(ctx.extensionPath)),
+    vscode.commands.registerCommand("sdd.instalarOrq", () => instalarOrq()),
     vscode.commands.registerCommand("sdd.configurarLayout", () => vscode.commands.executeCommand("workbench.action.openSettings", "sdd.layout")),
     vscode.workspace.onDidChangeConfiguration((e) => {
+      // Mudou nas Settings: o painel volta a mostrar o valor salvo.
+      if (e.affectsConfiguration("sdd.agente") || e.affectsConfiguration("sdd.orquestracao")) form.enviarRepos();
+      if (e.affectsConfiguration("sdd.reaproveitarTerminal")) {
+        arvore.atualizar();
+        status.atualizar();
+      }
       if (!e.affectsConfiguration("sdd.layout")) return;
       if (form.view) {
         form.view.webview.html = htmlForm(form.view.webview);
