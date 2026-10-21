@@ -8,3 +8,5 @@ instalar.cmd
 .agents/**
 .specify/**
 specs/**
+sdd-site/**
+sdd-site.tmp/**

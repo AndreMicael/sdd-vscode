@@ -94,6 +94,7 @@
       { "command": "sdd.taskstoclickup", "title": "SDD: Enviar ao ClickUp" },
       { "command": "sdd.wiki", "title": "SDD: Wiki da feature", "icon": "$(book)" },
       { "command": "sdd.excluirFeature", "title": "SDD: Excluir feature", "icon": "$(trash)" },
+      { "command": "sdd.gerarSite", "title": "SDD: Gerar site da documentação", "icon": "$(globe)" },
       { "command": "sdd.configurarLayout", "title": "SDD: Layout do painel", "icon": "$(settings-gear)" }
     ],
     "menus": {
@@ -102,6 +103,7 @@
         { "command": "sdd.atualizar", "when": "view == sdd.features", "group": "navigation@2" },
         { "command": "sdd.atualizarExtensao", "when": "view == sdd.features", "group": "navigation@9" },
         { "command": "sdd.buscarEquipe", "when": "view == sdd.features", "group": "navigation@3" },
+        { "command": "sdd.gerarSite", "when": "view == sdd.features", "group": "navigation@4" },
         { "command": "sdd.wiki", "when": "view == sdd.status", "group": "navigation@1" },
         { "command": "sdd.configurarLayout", "when": "view == sdd.form", "group": "navigation@1" }
       ],

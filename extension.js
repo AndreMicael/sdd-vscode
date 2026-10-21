@@ -8,6 +8,8 @@ const { execFile } = require("child_process");
 const { promisify } = require("util");
 const lib = require("./lib");
 const wiki = require("./wiki");
+const site = require("./site");
+const { esc } = lib;
 
 const PASSOS = {
   clarify: "Clarify (tirar dúvidas da spec)",
@@ -90,7 +92,7 @@ function obterTerminalFeature(raiz, dir, idIA) {
   if (!dir) return undefined;
   const chave = chaveTerminal(raiz, dir, idIA);
   if (terminaisFeature.has(chave)) return terminaisFeature.get(chave);
-  const temAlgum = [...terminaisFeature.values()].some((r) => r.dir === dir);
+  const temAlgum = [...terminaisFeature.values()].some((r) => r.raiz === raiz && r.dir === dir && r.idIA === idIA);
   const chaveNova = chaveTerminal(raiz, null, idIA);
   const nova = terminaisFeature.get(chaveNova);
   if (temAlgum || !nova || typeof nova.abertoEm !== "number") return undefined;
@@ -530,15 +532,6 @@ class Formulario {
       await rodar(m.raiz, m.dir, m.passo, m.args, [], m.agente);
     }
   }
-}
-
-function esc(s) {
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
 }
 
 const SELO = { feito: "✔", atual: "➜", pendente: "○", opcional: "◌" };
@@ -1148,6 +1141,40 @@ async function excluirFeature(item, arvore, status, form) {
   vscode.window.showInformationMessage(`Feature ${nome} excluida.`);
 }
 
+async function gerarSiteDoRepositorio(item) {
+  let raiz = item?.raiz;
+  if (!raiz) {
+    const escolha = await vscode.window.showQuickPick(
+      raizes().map((r) => ({ label: path.basename(r), description: r, raiz: r })),
+      { placeHolder: "Qual repositorio?" },
+    );
+    raiz = escolha?.raiz;
+  }
+  if (!raiz) return;
+  try {
+    const render = (md) => vscode.commands.executeCommand("markdown.api.render", md);
+    const arquivos = await site.gerarSite(raiz, render);
+    const pasta = path.join(raiz, "sdd-site");
+    if (fs.existsSync(pasta) && (!fs.statSync(pasta).isDirectory() || !fs.existsSync(path.join(pasta, ".gerado-pelo-sdd")))) {
+      vscode.window.showErrorMessage("A pasta sdd-site/ existe sem o marcador .gerado-pelo-sdd; nada foi apagado.");
+      return;
+    }
+    // Grava numa pasta temporária e só troca no fim, para uma falha de gravação não apagar o site anterior.
+    const temp = `${pasta}.tmp`;
+    fs.rmSync(temp, { recursive: true, force: true });
+    for (const [rel, conteudo] of arquivos) {
+      const destino = path.join(temp, ...rel.split("/"));
+      fs.mkdirSync(path.dirname(destino), { recursive: true });
+      fs.writeFileSync(destino, conteudo, "utf8");
+    }
+    fs.rmSync(pasta, { recursive: true, force: true });
+    fs.renameSync(temp, pasta);
+    await vscode.env.openExternal(vscode.Uri.file(path.join(pasta, "index.html")));
+  } catch (e) {
+    vscode.window.showErrorMessage(`Não foi possível gerar o site: ${e instanceof Error ? e.message : String(e)}`);
+  }
+}
+
 /** @param {vscode.ExtensionContext} ctx */
 function activate(ctx) {
   const arvore = new Arvore();
@@ -1336,6 +1363,7 @@ function activate(ctx) {
     }),
     vscode.commands.registerCommand("sdd.wiki", (item) => abrirWiki(item)),
     vscode.commands.registerCommand("sdd.excluirFeature", (item) => excluirFeature(item, arvore, status, form)),
+    vscode.commands.registerCommand("sdd.gerarSite", (item) => gerarSiteDoRepositorio(item)),
     ...Object.keys(PASSOS).map((p) => vscode.commands.registerCommand(`sdd.${p}`, (item) => executarPasso(p, item, form))),
   );
 }

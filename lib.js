@@ -4,6 +4,15 @@ const fs = require("fs");
 const path = require("path");
 const { execFileSync } = require("child_process");
 
+function esc(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 /** Conta tarefas `- [ ] T001` / `- [X] T001` do tasks.md. */
 function contarTarefas(texto) {
   const feitas = (texto.match(/^\s*- \[[xX]\] T\d{3,}/gm) || []).length;
@@ -290,7 +299,7 @@ function temMarcador(texto) {
 }
 
 module.exports = {
-  contarTarefas, passoDoArquivo, etapa, etapaDeArquivos, listarFeatures, featuresOutrasBranches, featureAtual, branchAtual, trilha, repositorios, proximoNumero, slug,
+  esc, contarTarefas, passoDoArquivo, etapa, etapaDeArquivos, listarFeatures, featuresOutrasBranches, featureAtual, branchAtual, trilha, repositorios, proximoNumero, slug,
   comandoAgente, juntar, AGENTES, agente, invocacao, integracoes, workspaceDaUrl, lerClickUp, salvarClickUp,
   ehCmd, ehPowerShell,
   PASSOS_ORQ, promptOrquestrado, skillInstalada,

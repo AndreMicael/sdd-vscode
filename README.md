@@ -35,6 +35,8 @@ Para atualizar, instale o `.vsix` da versão nova do mesmo jeito (não há atual
 
 ## O que tem no painel
 
+O comando **SDD: Gerar site da documentação** cria e abre o site estático em `sdd-site/`. A pasta contém o marcador `.gerado-pelo-sdd`; versioná-la ou não é decisão do time. O site preserva o HTML cru dos Markdown, portanto esse conteúdo pode executar HTML ou scripts quando publicado.
+
 - **Onde estou** — checklist dos 7 passos da feature da branch atual
   (Especificar → Esclarecer → Planejar → Tarefas → Conferir → Implementar → Fechar),
   com “← você está aqui”. Clicar num passo feito abre o arquivo; nos outros, abre o formulário do passo.
