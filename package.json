@@ -1,0 +1,77 @@
+{
+  "name": "sdd-speckit",
+  "displayName": "SDD (Spec Kit)",
+  "description": "Painel de features do Spec Kit: etapa de cada feature e botões para os comandos /speckit-* no Claude Code ou no Cursor.",
+  "version": "0.2.0",
+  "publisher": "desenvolve-mt",
+  "license": "UNLICENSED",
+  "engines": { "vscode": "^1.85.0" },
+  "categories": ["Other"],
+  "main": "./extension.js",
+  "activationEvents": ["workspaceContains:.specify/init-options.json", "workspaceContains:*/.specify/init-options.json", "onView:sdd.features"],
+  "scripts": { "test": "node --test" },
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [{ "id": "sdd", "title": "SDD", "icon": "media/sdd.svg" }]
+    },
+    "views": {
+      "sdd": [{ "id": "sdd.features", "name": "Features" }]
+    },
+    "viewsWelcome": [
+      {
+        "view": "sdd.features",
+        "contents": "Nenhum repositório git na pasta aberta. Abra a pasta de um projeto (ou a pasta que contém vários).\n[Nova feature](command:sdd.novaFeature)"
+      }
+    ],
+    "configuration": {
+      "title": "SDD",
+      "properties": {
+        "sdd.agente": {
+          "type": "string",
+          "enum": ["claude", "cursor"],
+          "default": "claude",
+          "description": "Agente que recebe os comandos /speckit-*: claude (Claude Code) ou cursor (CLI agent, requer `specify integration install cursor-agent`)."
+        },
+        "sdd.listaClickUp": {
+          "type": "string",
+          "default": "",
+          "description": "Lista do ClickUp sugerida em \"Enviar ao ClickUp\" (ex.: Sprint 1 (14/10 - 3/11))."
+        }
+      }
+    },
+    "commands": [
+      { "command": "sdd.novaFeature", "title": "SDD: Nova feature", "icon": "$(add)" },
+      { "command": "sdd.atualizar", "title": "SDD: Atualizar", "icon": "$(refresh)" },
+      { "command": "sdd.instalarSpecKit", "title": "SDD: Instalar Spec Kit neste repositório", "icon": "$(cloud-download)" },
+      { "command": "sdd.proximo", "title": "SDD: Próximo passo", "icon": "$(play)" },
+      { "command": "sdd.clarify", "title": "SDD: Clarify (tirar dúvidas da spec)" },
+      { "command": "sdd.plan", "title": "SDD: Plan (plano técnico)" },
+      { "command": "sdd.checklist", "title": "SDD: Checklist (qualidade dos requisitos)" },
+      { "command": "sdd.tasks", "title": "SDD: Tasks (gerar tasks.md)" },
+      { "command": "sdd.analyze", "title": "SDD: Analyze (conferir consistência)" },
+      { "command": "sdd.implement", "title": "SDD: Implement (implementar)" },
+      { "command": "sdd.converge", "title": "SDD: Converge (o que falta)" },
+      { "command": "sdd.taskstoclickup", "title": "SDD: Enviar ao ClickUp" }
+    ],
+    "menus": {
+      "view/title": [
+        { "command": "sdd.novaFeature", "when": "view == sdd.features", "group": "navigation@1" },
+        { "command": "sdd.atualizar", "when": "view == sdd.features", "group": "navigation@2" }
+      ],
+      "commandPalette": [{ "command": "sdd.instalarSpecKit", "when": "false" }],
+      "view/item/context": [
+        { "command": "sdd.novaFeature", "when": "viewItem == repo", "group": "inline" },
+        { "command": "sdd.instalarSpecKit", "when": "viewItem == repoSemSpecKit", "group": "inline" },
+        { "command": "sdd.proximo", "when": "viewItem == feature", "group": "inline" },
+        { "command": "sdd.clarify", "when": "viewItem == feature", "group": "1_spec@1" },
+        { "command": "sdd.checklist", "when": "viewItem == feature", "group": "1_spec@2" },
+        { "command": "sdd.plan", "when": "viewItem == feature", "group": "2_plano@1" },
+        { "command": "sdd.tasks", "when": "viewItem == feature", "group": "2_plano@2" },
+        { "command": "sdd.analyze", "when": "viewItem == feature", "group": "2_plano@3" },
+        { "command": "sdd.implement", "when": "viewItem == feature", "group": "3_codigo@1" },
+        { "command": "sdd.converge", "when": "viewItem == feature", "group": "3_codigo@2" },
+        { "command": "sdd.taskstoclickup", "when": "viewItem == feature", "group": "4_clickup@1" }
+      ]
+    }
+  }
+}
