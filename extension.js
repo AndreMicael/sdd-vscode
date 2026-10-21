@@ -116,14 +116,14 @@ function terminal(raiz, dir, comandos) {
 }
 
 /** Chama o agente com o comando do Spec Kit. */
-function rodar(raiz, dir, prompt, antes = []) {
-  const usarCursor = vscode.workspace.getConfiguration("sdd").get("agente") === "cursor";
+function rodar(raiz, dir, prompt, antes = [], agente) {
+  const usarCursor = (agente ?? vscode.workspace.getConfiguration("sdd").get("agente")) === "cursor";
   terminal(raiz, dir, [...antes, lib.comandoAgente(usarCursor ? "agent" : "claude", prompt, vscode.env.shell)]);
 }
 
 /** Instala o Spec Kit no repositório (o init preserva uma constituição já existente). */
-async function instalarSpecKit(raiz) {
-  const usarCursor = vscode.workspace.getConfiguration("sdd").get("agente") === "cursor";
+async function instalarSpecKit(raiz, agente) {
+  const usarCursor = (agente ?? vscode.workspace.getConfiguration("sdd").get("agente")) === "cursor";
   const ok = await vscode.window.showWarningMessage(
     `Instalar o Spec Kit em ${path.basename(raiz)}? Ele cria .specify/ e ${usarCursor ? ".cursor" : ".claude"}/skills/ no repositório.`,
     { modal: true },
@@ -186,7 +186,11 @@ class Formulario {
 
   enviarRepos() {
     if (!this.view) return;
-    this.view.webview.postMessage({ tipo: "repos", repos: listaRepos() });
+    this.view.webview.postMessage({
+      tipo: "repos",
+      repos: listaRepos(),
+      agente: vscode.workspace.getConfiguration("sdd").get("agente") || "claude",
+    });
   }
 
   /** @param {string | undefined} raiz */
@@ -212,20 +216,24 @@ class Formulario {
 
   /** @param {any} m */
   async receber(m) {
+    if (m.tipo === "agente") {
+      await vscode.workspace.getConfiguration("sdd").update("agente", m.agente, vscode.ConfigurationTarget.Global);
+      return;
+    }
     if (m.tipo === "criar") {
       const r = repos().find((x) => x.dir === m.raiz);
       if (!r) return;
       if (!r.specKit) {
-        await instalarSpecKit(r.dir);
+        await instalarSpecKit(r.dir, m.agente);
         return;
       }
       const s = lib.slug(m.nome || "");
       const antes = s ? [`git switch -c ${lib.proximoNumero(lib.listarFeatures(r.dir))}-${s}`] : [];
-      rodar(r.dir, null, `/speckit-specify ${m.descricao}`, antes);
+      rodar(r.dir, null, `/speckit-specify ${m.descricao}`, antes, m.agente);
       return;
     }
     if (m.tipo === "executar") {
-      rodar(m.raiz, m.dir, `/speckit-${m.passo}${m.args ? " " + m.args : ""}`);
+      rodar(m.raiz, m.dir, `/speckit-${m.passo}${m.args ? " " + m.args : ""}`, [], m.agente);
     }
   }
 }
@@ -277,6 +285,11 @@ function htmlForm(webview) {
 </style>
 </head>
 <body>
+  <label for="agente">IA</label>
+  <select id="agente">
+    <option value="claude">Claude Code</option>
+    <option value="cursor">Cursor</option>
+  </select>
   <div id="modo-nova">
     <h3>Nova feature</h3>
     <label for="repo">Repositório</label>
@@ -308,6 +321,7 @@ const el = (id) => document.getElementById(id);
 let repos = [];
 let passoAtual = null;
 let featureAtual = null;
+let agenteTocado = false;
 
 function erro(msg) { el("erro").textContent = msg || ""; }
 
@@ -353,6 +367,7 @@ window.addEventListener("message", (e) => {
   if (m.tipo === "repos") {
     repos = m.repos || [];
     preencherRepos();
+    if (!agenteTocado && m.agente) el("agente").value = m.agente;
   } else if (m.tipo === "nova") {
     mostrarNova(m.raiz);
   } else if (m.tipo === "passo") {
@@ -364,15 +379,19 @@ function criar() {
   const descricao = el("descricao").value.trim();
   if (!descricao) { erro("Descreva o que você quer construir."); return; }
   erro("");
-  vscode.postMessage({ tipo: "criar", raiz: el("repo").value, descricao, nome: el("branch").value });
+  vscode.postMessage({ tipo: "criar", raiz: el("repo").value, descricao, nome: el("branch").value, agente: el("agente").value });
 }
 
 function executar() {
   if (!passoAtual || !featureAtual) return;
   const args = passoAtual === "taskstoclickup" ? el("lista").value : el("args").value;
-  vscode.postMessage({ tipo: "executar", passo: passoAtual, raiz: featureAtual.raiz, dir: featureAtual.dir, args });
+  vscode.postMessage({ tipo: "executar", passo: passoAtual, raiz: featureAtual.raiz, dir: featureAtual.dir, args, agente: el("agente").value });
 }
 
+el("agente").addEventListener("change", () => {
+  agenteTocado = true;
+  vscode.postMessage({ tipo: "agente", agente: el("agente").value });
+});
 el("criar").addEventListener("click", criar);
 el("executar").addEventListener("click", executar);
 el("cancelar").addEventListener("click", () => mostrarNova());
