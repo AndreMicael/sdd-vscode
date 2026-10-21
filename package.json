@@ -1,7 +1,7 @@
 {
   "name": "sdd-speckit",
   "displayName": "SDD (Spec Kit)",
-  "description": "Painel de features do Spec Kit: etapa de cada feature e botões para os comandos /speckit-* no Claude Code ou no Cursor.",
+  "description": "Painel do Spec Kit (SDD): em que passo cada feature está, wiki de cada passo e comandos /speckit-* no Claude Code, Cursor, Codex, OpenCode ou Antigravity.",
   "version": "0.7.0",
   "publisher": "desenvolve-mt",
   "license": "UNLICENSED",
