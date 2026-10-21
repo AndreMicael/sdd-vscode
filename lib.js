@@ -217,6 +217,11 @@ function skillInstalada(nome, home) {
   return fs.existsSync(path.join(home, ".claude", "skills", nome, "SKILL.md"));
 }
 
+/** Claude + passo elegível + modo /orq ou /orq-lazy. */
+function aplicaOrquestracao(id, passo, modo) {
+  return id === "claude" && PASSOS_ORQ.includes(passo) && (modo === "orq" || modo === "orq-lazy");
+}
+
 const agente = (id) => AGENTES[id] || AGENTES.claude;
 
 /** Ex.: invocacao("codex", "plan", "só a fase 1") → "$speckit-plan só a fase 1". */
@@ -293,6 +298,6 @@ module.exports = {
   contarTarefas, passoDoArquivo, etapa, etapaDeArquivos, listarFeatures, featuresOutrasBranches, featureAtual, branchAtual, trilha, repositorios, proximoNumero, slug,
   comandoAgente, juntar, AGENTES, agente, invocacao, integracoes, workspaceDaUrl, lerClickUp, salvarClickUp,
   ehCmd, ehPowerShell,
-  PASSOS_ORQ, promptOrquestrado, skillInstalada,
+  PASSOS_ORQ, promptOrquestrado, skillInstalada, aplicaOrquestracao,
   comMarcador, temMarcador,
 };

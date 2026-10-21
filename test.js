@@ -127,6 +127,10 @@ test("orquestracao e skills", () => {
   fs.mkdirSync(path.join(home, ".claude", "skills", "orq"), { recursive: true });
   fs.writeFileSync(path.join(home, ".claude", "skills", "orq", "SKILL.md"), "# orq\n");
   assert.strictEqual(lib.skillInstalada("orq", home), true);
+  assert.strictEqual(lib.aplicaOrquestracao("claude", "plan", "orq"), true);
+  assert.strictEqual(lib.aplicaOrquestracao("claude", "clarify", "orq"), false);
+  assert.strictEqual(lib.aplicaOrquestracao("cursor", "plan", "orq"), false);
+  assert.strictEqual(lib.aplicaOrquestracao("claude", "plan", "desligada"), false);
 });
 
 test("ClickUp: valida, grava e relê o vínculo", () => {
