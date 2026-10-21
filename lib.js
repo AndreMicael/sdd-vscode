@@ -197,6 +197,19 @@ const AGENTES = {
   agy: { nome: "Antigravity", exe: "agy -i", integracao: "agy", prefixo: "/speckit-" },
 };
 
+const PASSOS_ORQ = ["plan", "tasks", "analyze", "implement", "converge"];
+
+function promptOrquestrado(modo, prompt) {
+  return modo === "orq" || modo === "orq-lazy"
+    // Só o primeiro "/" da mensagem é expandido; o passo do Spec Kit é chamado pelo Claude via ferramenta Skill.
+    ? `/${modo} Execute ${prompt} seguindo o Spec Kit (chame a skill pela ferramenta Skill). No fim, mostre a tabela de tokens por IA.`
+    : prompt;
+}
+
+function skillInstalada(nome, home) {
+  return fs.existsSync(path.join(home, ".claude", "skills", nome, "SKILL.md"));
+}
+
 const agente = (id) => AGENTES[id] || AGENTES.claude;
 
 /** Ex.: invocacao("codex", "plan", "só a fase 1") → "$speckit-plan só a fase 1". */
@@ -264,4 +277,5 @@ module.exports = {
   contarTarefas, etapa, etapaDeArquivos, listarFeatures, featuresOutrasBranches, featureAtual, branchAtual, trilha, repositorios, proximoNumero, slug,
   comandoAgente, juntar, AGENTES, agente, invocacao, integracoes, workspaceDaUrl, lerClickUp, salvarClickUp,
   ehCmd, ehPowerShell,
+  PASSOS_ORQ, promptOrquestrado, skillInstalada,
 };

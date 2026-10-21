@@ -2,7 +2,7 @@
   "name": "sdd-speckit",
   "displayName": "SDD (Spec Kit)",
   "description": "Painel do Spec Kit (SDD): em que passo cada feature está, wiki de cada passo e comandos /speckit-* no Claude Code, Cursor, Codex, OpenCode ou Antigravity.",
-  "version": "0.12.2",
+  "version": "0.13.0",
   "publisher": "desenvolve-mt",
   "license": "UNLICENSED",
   "engines": { "vscode": "^1.85.0" },
@@ -34,6 +34,13 @@
     "configuration": {
       "title": "SDD",
       "properties": {
+        "sdd.orquestracao": {
+          "type": "string",
+          "enum": ["desligada", "orq", "orq-lazy"],
+          "default": "desligada",
+          "enumDescriptions": ["Claude faz tudo sozinho", "Claude delega ao Codex/Cursor/OpenCode (/orq)", "Delega e faz a menor mudan\u00e7a poss\u00edvel (/orq-lazy)"],
+          "description": "S\u00f3 vale com a IA Claude Code e nos passos Plan, Tasks, Analyze, Implement e Converge."
+        },
         "sdd.agente": {
           "type": "string",
           "enum": ["claude", "cursor", "codex", "opencode", "agy"],
@@ -62,6 +69,7 @@
       }
     },
     "commands": [
+      { "command": "sdd.instalarOrq", "title": "SDD: Instalar skills de orquestra\u00e7\u00e3o (/orq)", "icon": "$(hubot)" },
       { "command": "sdd.novaFeature", "title": "SDD: Nova feature", "icon": "$(add)" },
       { "command": "sdd.atualizar", "title": "SDD: Atualizar", "icon": "$(refresh)" },
       { "command": "sdd.atualizarExtensao", "title": "SDD: Atualizar extensão (última versão)", "icon": "$(extensions)" },
@@ -93,6 +101,7 @@
         { "command": "sdd.configurarLayout", "when": "view == sdd.form", "group": "navigation@1" }
       ],
       "commandPalette": [
+        { "command": "sdd.instalarOrq" },
         { "command": "sdd.instalarSpecKit", "when": "false" },
         { "command": "sdd.excluirFeature" }
       ],

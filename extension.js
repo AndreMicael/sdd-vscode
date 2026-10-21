@@ -5,6 +5,7 @@ const path = require("path");
 const os = require("os");
 const crypto = require("crypto");
 const { execFile } = require("child_process");
+const { promisify } = require("util");
 const lib = require("./lib");
 const wiki = require("./wiki");
 
@@ -229,6 +230,32 @@ function atualizarExtensao(extensaoDir) {
 
 const agenteConfig = () => vscode.workspace.getConfiguration("sdd").get("agente") || "claude";
 
+async function instalarOrq() {
+  let tmp = "";
+  try {
+    tmp = fs.mkdtempSync(path.join(os.tmpdir(), "sdd-orq-"));
+    await vscode.window.withProgress(
+      { location: vscode.ProgressLocation.Notification, title: "Baixando skills /orq..." },
+      () => promisify(execFile)("git", ["clone", "--depth", "1", "https://github.com/AndreMicael/orq-skill", tmp], { timeout: 120000, windowsHide: true }),
+    );
+    const destino = path.join(os.homedir(), ".claude", "skills");
+    for (const entrada of fs.readdirSync(path.join(tmp, "skills"), { withFileTypes: true })) {
+      if (entrada.isDirectory()) fs.cpSync(path.join(tmp, "skills", entrada.name), path.join(destino, entrada.name), { recursive: true, force: true });
+    }
+    vscode.window.showInformationMessage("Skills /orq, /orq-lazy e /cursor-agent instaladas. Elas valem nas proximas sessoes do Claude Code.");
+    return true;
+  } catch (e) {
+    vscode.window.showErrorMessage("Nao foi possivel instalar as skills: " + (e instanceof Error ? e.message : String(e)));
+    return false;
+  } finally {
+    try {
+      if (tmp) fs.rmSync(tmp, { recursive: true, force: true });
+    } catch {
+      // Pasta temporária presa (antivírus/arquivo aberto) não deve virar erro para o usuário.
+    }
+  }
+}
+
 /**
  * Chama a IA escolhida com o comando do Spec Kit (`passo` = specify, plan...).
  * Se a integração dessa IA ainda não está no repositório, oferece instalar e não roda.
@@ -247,7 +274,23 @@ async function rodar(raiz, dir, passo, args, antes = [], id = agenteConfig()) {
     vscode.window.showInformationMessage("Quando a instalação terminar, clique de novo para rodar o comando.");
     return;
   }
-  terminal(raiz, dir, [...antes, lib.comandoAgente(a.exe, lib.invocacao(id, passo, args), vscode.env.shell)]);
+  let prompt = lib.invocacao(id, passo, args);
+  const modo = vscode.workspace.getConfiguration("sdd").get("orquestracao") || "desligada";
+  if (id === "claude" && lib.PASSOS_ORQ.includes(passo) && (modo === "orq" || modo === "orq-lazy")) {
+    if (!lib.skillInstalada(modo, os.homedir())) {
+      const escolha = await vscode.window.showWarningMessage(
+        `A skill /${modo} nao esta instalada nesta maquina. Instalar agora? (baixa de github.com/AndreMicael/orq-skill)`,
+        { modal: true },
+        "Instalar",
+        "Rodar sem orquestracao",
+      );
+      if (escolha === "Instalar") {
+        if (!(await instalarOrq())) return;
+      } else if (escolha !== "Rodar sem orquestracao") return;
+    }
+    if (lib.skillInstalada(modo, os.homedir())) prompt = lib.promptOrquestrado(modo, prompt);
+  }
+  terminal(raiz, dir, [...antes, lib.comandoAgente(a.exe, prompt, vscode.env.shell)]);
 }
 
 /** Instala o Spec Kit no repositório (o init preserva uma constituição já existente). */
@@ -319,6 +362,7 @@ class Formulario {
       tipo: "repos",
       repos: listaRepos(),
       agente: agenteConfig(),
+      orquestracao: vscode.workspace.getConfiguration("sdd").get("orquestracao") || "desligada",
     });
   }
 
@@ -347,6 +391,10 @@ class Formulario {
   async receber(m) {
     if (m.tipo === "agente") {
       await vscode.workspace.getConfiguration("sdd").update("agente", m.agente, vscode.ConfigurationTarget.Global);
+      return;
+    }
+    if (m.tipo === "orquestracao") {
+      await vscode.workspace.getConfiguration("sdd").update("orquestracao", m.valor, vscode.ConfigurationTarget.Global);
       return;
     }
     if (m.tipo === "criar") {
@@ -775,6 +823,15 @@ function htmlForm(webview) {
   <select id="agente">
     ${Object.entries(lib.AGENTES).map(([id, a]) => `<option value="${id}">${a.nome}</option>`).join("")}
   </select>
+  <div id="bloco-orquestracao" class="oculto">
+    <label for="orquestracao">Orquestracao</label>
+    <select id="orquestracao">
+      <option value="desligada">Desligada</option>
+      <option value="orq">/orq - delega aos outros agentes</option>
+      <option value="orq-lazy">/orq-lazy - delega com mudanca minima</option>
+    </select>
+    <small class="dica">So com Claude Code, nos passos Plan a Converge.</small>
+  </div>
   </div>
   <div id="modo-nova" class="card">
     <h3>Nova feature</h3>
@@ -808,7 +865,10 @@ const el = (id) => document.getElementById(id);
 let repos = [];
 let passoAtual = null;
 let featureAtual = null;
-let agenteTocado = false;
+
+function atualizarOrquestracao() {
+  el("bloco-orquestracao").classList.toggle("oculto", el("agente").value !== "claude");
+}
 
 function erro(msg) { el("erro").textContent = msg || ""; }
 
@@ -854,7 +914,9 @@ window.addEventListener("message", (e) => {
   if (m.tipo === "repos") {
     repos = m.repos || [];
     preencherRepos();
-    if (!agenteTocado && m.agente) el("agente").value = m.agente;
+    if (m.agente) el("agente").value = m.agente;
+    if (m.orquestracao) el("orquestracao").value = m.orquestracao;
+    atualizarOrquestracao();
   } else if (m.tipo === "nova") {
     mostrarNova(m.raiz);
   } else if (m.tipo === "passo") {
@@ -876,8 +938,11 @@ function executar() {
 }
 
 el("agente").addEventListener("change", () => {
-  agenteTocado = true;
+  atualizarOrquestracao();
   vscode.postMessage({ tipo: "agente", agente: el("agente").value });
+});
+el("orquestracao").addEventListener("change", () => {
+  vscode.postMessage({ tipo: "orquestracao", valor: el("orquestracao").value });
 });
 el("criar").addEventListener("click", criar);
 el("executar").addEventListener("click", executar);
@@ -999,8 +1064,11 @@ function activate(ctx) {
       form.enviarRepos();
     }),
     vscode.commands.registerCommand("sdd.atualizarExtensao", () => atualizarExtensao(ctx.extensionPath)),
+    vscode.commands.registerCommand("sdd.instalarOrq", () => instalarOrq()),
     vscode.commands.registerCommand("sdd.configurarLayout", () => vscode.commands.executeCommand("workbench.action.openSettings", "sdd.layout")),
     vscode.workspace.onDidChangeConfiguration((e) => {
+      // Mudou nas Settings: o painel volta a mostrar o valor salvo.
+      if (e.affectsConfiguration("sdd.agente") || e.affectsConfiguration("sdd.orquestracao")) form.enviarRepos();
       if (!e.affectsConfiguration("sdd.layout")) return;
       if (form.view) {
         form.view.webview.html = htmlForm(form.view.webview);

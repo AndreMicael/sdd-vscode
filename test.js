@@ -107,6 +107,21 @@ test("invocacao e integracoes por IA", () => {
   assert.deepStrictEqual(lib.integracoes(raiz), ["claude", "cursor-agent"]);
 });
 
+test("orquestracao e skills", () => {
+  assert.deepStrictEqual(lib.PASSOS_ORQ, ["plan", "tasks", "analyze", "implement", "converge"]);
+  assert.strictEqual(
+    lib.promptOrquestrado("orq", "/speckit-implement so fase 1"),
+    "/orq Execute /speckit-implement so fase 1 seguindo o Spec Kit (chame a skill pela ferramenta Skill). No fim, mostre a tabela de tokens por IA.",
+  );
+  const prompt = "x";
+  assert.strictEqual(lib.promptOrquestrado("desligada", prompt), prompt);
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), "sdd-orq-"));
+  assert.strictEqual(lib.skillInstalada("orq", home), false);
+  fs.mkdirSync(path.join(home, ".claude", "skills", "orq"), { recursive: true });
+  fs.writeFileSync(path.join(home, ".claude", "skills", "orq", "SKILL.md"), "# orq\n");
+  assert.strictEqual(lib.skillInstalada("orq", home), true);
+});
+
 test("ClickUp: valida, grava e relê o vínculo", () => {
   const raiz = fs.mkdtempSync(path.join(os.tmpdir(), "sdd-clickup-"));
   assert.strictEqual(lib.workspaceDaUrl("https://app.clickup.com/90132384077/v/l/f/1000270000010285"), "90132384077");
