@@ -3,6 +3,7 @@ const vscode = require("vscode");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
+const { execFile } = require("child_process");
 const lib = require("./lib");
 const wiki = require("./wiki");
 
@@ -38,9 +39,16 @@ function raizes() {
   return repos().filter((r) => r.specKit).map((r) => r.dir);
 }
 
+// Cache por atualização da árvore: cada consulta roda vários comandos git.
+const cacheOutras = new Map();
+function outrasBranches(raiz) {
+  if (!cacheOutras.has(raiz)) cacheOutras.set(raiz, lib.featuresOutrasBranches(raiz));
+  return cacheOutras.get(raiz);
+}
+
 function itemRepo(r) {
   const item = new vscode.TreeItem(path.basename(r.dir), vscode.TreeItemCollapsibleState.Expanded);
-  const n = r.specKit ? lib.listarFeatures(r.dir).length : 0;
+  const n = r.specKit ? lib.listarFeatures(r.dir).length + outrasBranches(r.dir).length : 0;
   item.description = r.specKit ? `${n} feature${n === 1 ? "" : "s"}` : "sem Spec Kit";
   item.tooltip = r.dir;
   item.iconPath = new vscode.ThemeIcon(r.specKit ? "repo" : "warning");
@@ -59,6 +67,15 @@ function itemFeature(raiz, nome) {
   item.iconPath = new vscode.ThemeIcon(ICONES[etapa.id]);
   item.contextValue = "feature";
   return Object.assign(item, { tipo: "feature", raiz, dir, etapa });
+}
+
+function itemFeatureOutraBranch(raiz, feature) {
+  const item = new vscode.TreeItem(feature.nome, vscode.TreeItemCollapsibleState.None);
+  item.description = `${feature.etapa.rotulo} · em ${feature.ref}`;
+  item.tooltip = "Esta feature esta em outra branch. Clique com o botao direito > Abrir branch para trabalhar nela.";
+  item.iconPath = new vscode.ThemeIcon(feature.remota ? "cloud" : "git-branch");
+  item.contextValue = "featureOutraBranch";
+  return Object.assign(item, { tipo: "featureOutraBranch", raiz, nome: feature.nome, ref: feature.ref, remota: feature.remota });
 }
 
 function itensArquivos(dir) {
@@ -88,6 +105,7 @@ class Arvore {
     this.onDidChangeTreeData = this.evento.event;
   }
   atualizar() {
+    cacheOutras.clear();
     this.evento.fire(undefined);
   }
   getTreeItem(e) {
@@ -95,7 +113,12 @@ class Arvore {
   }
   getChildren(e) {
     if (!e) return repos().map(itemRepo);
-    if (e.tipo === "repo") return lib.listarFeatures(e.raiz).map((n) => itemFeature(e.raiz, n));
+    if (e.tipo === "repo") {
+      return [
+        ...lib.listarFeatures(e.raiz).map((n) => itemFeature(e.raiz, n)),
+        ...outrasBranches(e.raiz).map((f) => itemFeatureOutraBranch(e.raiz, f)),
+      ];
+    }
     if (e.tipo === "feature" || e.tipo === "pasta") return itensArquivos(e.dir);
     return [];
   }
@@ -837,7 +860,7 @@ function activate(ctx) {
     }, 300);
   };
   const vigia = vscode.workspace.createFileSystemWatcher(
-    "**/{specs/**,.specify/feature.json,.specify/init-options.json,.git/HEAD}",
+    "**/{specs/**,.specify/feature.json,.specify/init-options.json,.git/HEAD,.git/refs/**,.git/packed-refs}",
   );
   vigia.onDidCreate(atualizar);
   vigia.onDidChange(atualizar);
@@ -852,6 +875,32 @@ function activate(ctx) {
       arvore.atualizar();
       status.atualizar();
       form.enviarRepos();
+    }),
+    vscode.commands.registerCommand("sdd.abrirBranch", async (item) => {
+      // Remota: git switch <nome> cria a local rastreando origin/<nome>. Local: o nome exato da branch.
+      const alvo = item?.remota ? item.nome : item?.ref;
+      if (!item?.raiz || !alvo || !/^[\w./-]+$/.test(alvo)) return;
+      const ok = await vscode.window.showInformationMessage(
+        `Trocar para a branch ${alvo}? Alteracoes nao commitadas vao junto (ou o git recusa se houver conflito).`,
+        { modal: true },
+        "Trocar",
+      );
+      if (ok === "Trocar") terminal(item.raiz, null, [`git switch ${alvo}`]);
+    }),
+    vscode.commands.registerCommand("sdd.buscarEquipe", async () => {
+      const lista = repos();
+      await vscode.window.withProgress(
+        { location: vscode.ProgressLocation.Notification, title: "Buscando branches da equipe..." },
+        async () => {
+          await Promise.all(lista.map((repo) => new Promise((resolve) => {
+            execFile("git", ["fetch", "--prune"], { cwd: repo.dir, timeout: 60000, windowsHide: true }, (erro) => {
+              if (erro) vscode.window.showWarningMessage(`Nao foi possivel buscar branches em ${path.basename(repo.dir)}.`);
+              resolve();
+            });
+          })));
+        },
+      );
+      atualizar();
     }),
     vscode.workspace.onDidChangeWorkspaceFolders(atualizar),
     vscode.commands.registerCommand("sdd.instalarSpecKit", (item) => item?.raiz && instalarSpecKit(item.raiz)),

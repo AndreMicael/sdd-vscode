@@ -37,6 +37,7 @@ Para atualizar, instale o `.vsix` da versão nova do mesmo jeito (não há atual
   com “← você está aqui”. Clicar num passo feito abre o arquivo; nos outros, abre o formulário do passo.
 - **Features** — um nó por repositório aberto (a pasta aberta ou as subpastas diretas) e as features
   de `specs/` com a etapa de cada uma.
+  - Features de outras branches (suas ou da equipe, apos Buscar features da equipe) aparecem com icone de nuvem/branch; botao direito > Abrir branch para trabalhar nelas.
   - **+** no repositório: nova feature. **▶**: próximo passo. **📖**: wiki da feature.
   - **Botão direito** na feature: Wiki, Clarify, Checklist, Plan, Tasks, Analyze, Implement, Converge,
     Enviar ao ClickUp, Excluir (pasta vai para a lixeira; branch opcional).

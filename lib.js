@@ -2,6 +2,7 @@
 // Lógica pura (sem a API do VS Code), testada em test.js com `node --test`.
 const fs = require("fs");
 const path = require("path");
+const { execFileSync } = require("child_process");
 
 /** Conta tarefas `- [ ] T001` / `- [X] T001` do tasks.md. */
 function contarTarefas(texto) {
@@ -13,10 +14,16 @@ function contarTarefas(texto) {
 /** Em que etapa a feature está e qual é o próximo comando. */
 function etapa(dir) {
   const tem = (f) => fs.existsSync(path.join(dir, f));
+  const lerTasks = () => fs.readFileSync(path.join(dir, "tasks.md"), "utf8");
+  return etapaDeArquivos(tem, lerTasks);
+}
+
+/** Calcula a etapa usando a existência dos arquivos e, opcionalmente, seu tasks.md. */
+function etapaDeArquivos(tem, lerTasks) {
   if (!tem("spec.md")) return { id: "vazia", rotulo: "sem spec", proximo: null };
   if (!tem("plan.md")) return { id: "spec", rotulo: "spec pronta", proximo: "plan" };
   if (!tem("tasks.md")) return { id: "plano", rotulo: "plano pronto", proximo: "tasks" };
-  const t = contarTarefas(fs.readFileSync(path.join(dir, "tasks.md"), "utf8"));
+  const t = contarTarefas(lerTasks());
   if (t.total === 0 || t.feitas < t.total) {
     return { id: "implementando", rotulo: `tarefas ${t.feitas}/${t.total}`, proximo: "implement" };
   }
@@ -32,6 +39,58 @@ function listarFeatures(raiz) {
     .filter((d) => d.isDirectory() && /^\d+-/.test(d.name))
     .map((d) => d.name)
     .sort();
+}
+
+/** Features presentes em branches locais/remotas, mas ausentes na pasta specs/ atual. */
+function featuresOutrasBranches(raiz) {
+  try {
+    const refs = execFileSync(
+      "git",
+      ["for-each-ref", "--format=%(refname)", "refs/heads", "refs/remotes"],
+      { cwd: raiz, encoding: "utf8", timeout: 5000, windowsHide: true },
+    )
+      .split(/\r?\n/)
+      .map((ref) => ref.trim())
+      .filter(Boolean)
+      // Locais primeiro: assim a branch local vence a remota de mesmo nome.
+      .sort((a, b) => Number(a.startsWith("refs/remotes/")) - Number(b.startsWith("refs/remotes/")));
+    const locais = new Set(listarFeatures(raiz));
+    const porNome = new Map();
+    for (const completo of refs) {
+      if (completo.endsWith("/HEAD")) continue;
+      const remota = completo.startsWith("refs/remotes/");
+      const ref = completo.replace(/^refs\/(heads|remotes)\//, "");
+      const nome = ref.split("/").pop();
+      if (!nome || !/^\d+-[\w.-]+$/.test(nome) || locais.has(nome) || porNome.has(nome)) continue;
+      const prefixo = `specs/${nome}/`;
+      try {
+      const arquivos = execFileSync(
+        "git",
+        ["ls-tree", "-r", "--name-only", ref, "--", prefixo],
+        { cwd: raiz, encoding: "utf8", timeout: 5000, windowsHide: true },
+      )
+        .split(/\r?\n/)
+        .map((arquivo) => arquivo.trim())
+        .filter(Boolean);
+      if (!arquivos.length) continue;
+      const nomes = new Set(arquivos.map((arquivo) => arquivo.slice(prefixo.length)));
+      const etapa = etapaDeArquivos(
+        (arquivo) => nomes.has(arquivo),
+        () => execFileSync(
+          "git",
+          ["show", `${ref}:${prefixo}tasks.md`],
+          { cwd: raiz, encoding: "utf8", timeout: 5000, windowsHide: true },
+        ),
+      );
+      porNome.set(nome, { nome, ref, remota, etapa });
+      } catch {
+        // Uma branch com problema não esconde as outras.
+      }
+    }
+    return [...porNome.values()].sort((a, b) => a.nome.localeCompare(b.nome));
+  } catch {
+    return [];
+  }
 }
 
 /** Feature marcada em .specify/feature.json, como caminho absoluto. */
@@ -171,6 +230,6 @@ function juntar(comandos, shell) {
 }
 
 module.exports = {
-  contarTarefas, etapa, listarFeatures, featureAtual, branchAtual, trilha, repositorios, proximoNumero, slug,
+  contarTarefas, etapa, etapaDeArquivos, listarFeatures, featuresOutrasBranches, featureAtual, branchAtual, trilha, repositorios, proximoNumero, slug,
   comandoAgente, juntar, AGENTES, agente, invocacao, integracoes,
 };

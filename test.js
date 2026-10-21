@@ -3,11 +3,40 @@ const assert = require("node:assert");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
+const { execFileSync } = require("child_process");
 const lib = require("./lib");
 
 test("contarTarefas", () => {
   const t = lib.contarTarefas("- [X] T001 a\n- [x] T002 [P] b\n- [ ] T003 c\n- [ ] sem id\n");
   assert.deepStrictEqual(t, { feitas: 2, total: 3 });
+});
+
+test("featuresOutrasBranches encontra feature em branch local e respeita pasta local", (t) => {
+  try {
+    execFileSync("git", ["--version"], { encoding: "utf8", windowsHide: true });
+  } catch {
+    t.skip("git indisponível");
+    return;
+  }
+  const raiz = fs.mkdtempSync(path.join(os.tmpdir(), "sdd-git-"));
+  const git = (...args) => execFileSync("git", args, { cwd: raiz, encoding: "utf8", windowsHide: true });
+  git("init");
+  git("config", "user.email", "teste@example.com");
+  git("config", "user.name", "Teste");
+  git("commit", "--allow-empty", "-m", "inicial");
+  git("switch", "-c", "002-outra");
+  fs.mkdirSync(path.join(raiz, "specs", "002-outra"), { recursive: true });
+  fs.writeFileSync(path.join(raiz, "specs", "002-outra", "spec.md"), "# Spec\n");
+  fs.writeFileSync(path.join(raiz, "specs", "002-outra", "plan.md"), "# Plan\n");
+  git("add", ".");
+  git("commit", "-m", "feature");
+  git("switch", "-");
+
+  assert.deepStrictEqual(lib.featuresOutrasBranches(raiz), [
+    { nome: "002-outra", ref: "002-outra", remota: false, etapa: { id: "plano", rotulo: "plano pronto", proximo: "tasks" } },
+  ]);
+  fs.mkdirSync(path.join(raiz, "specs", "002-outra"), { recursive: true });
+  assert.deepStrictEqual(lib.featuresOutrasBranches(raiz), []);
 });
 
 test("etapa segue spec → plan → tasks → implement → converge", () => {

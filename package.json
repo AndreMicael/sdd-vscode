@@ -2,7 +2,7 @@
   "name": "sdd-speckit",
   "displayName": "SDD (Spec Kit)",
   "description": "Painel do Spec Kit (SDD): em que passo cada feature está, wiki de cada passo e comandos /speckit-* no Claude Code, Cursor, Codex, OpenCode ou Antigravity.",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "publisher": "desenvolve-mt",
   "license": "UNLICENSED",
   "engines": { "vscode": "^1.85.0" },
@@ -51,6 +51,8 @@
     "commands": [
       { "command": "sdd.novaFeature", "title": "SDD: Nova feature", "icon": "$(add)" },
       { "command": "sdd.atualizar", "title": "SDD: Atualizar", "icon": "$(refresh)" },
+      { "command": "sdd.abrirBranch", "title": "SDD: Abrir branch da feature", "icon": "$(git-branch)" },
+      { "command": "sdd.buscarEquipe", "title": "SDD: Buscar features da equipe (git fetch)", "icon": "$(cloud-download)" },
       { "command": "sdd.instalarSpecKit", "title": "SDD: Instalar Spec Kit neste repositório", "icon": "$(cloud-download)" },
       { "command": "sdd.proximo", "title": "SDD: Próximo passo", "icon": "$(play)" },
       { "command": "sdd.clarify", "title": "SDD: Clarify (tirar dúvidas da spec)" },
@@ -68,6 +70,7 @@
       "view/title": [
         { "command": "sdd.novaFeature", "when": "view == sdd.features", "group": "navigation@1" },
         { "command": "sdd.atualizar", "when": "view == sdd.features", "group": "navigation@2" },
+        { "command": "sdd.buscarEquipe", "when": "view == sdd.features", "group": "navigation@3" },
         { "command": "sdd.wiki", "when": "view == sdd.status", "group": "navigation@1" }
       ],
       "commandPalette": [
@@ -76,6 +79,8 @@
       ],
       "view/item/context": [
         { "command": "sdd.novaFeature", "when": "viewItem == repo", "group": "inline" },
+        { "command": "sdd.abrirBranch", "when": "viewItem == featureOutraBranch", "group": "inline" },
+        { "command": "sdd.abrirBranch", "when": "viewItem == featureOutraBranch", "group": "0_branch@1" },
         { "command": "sdd.instalarSpecKit", "when": "viewItem == repoSemSpecKit", "group": "inline" },
         { "command": "sdd.wiki", "when": "viewItem == feature", "group": "0_wiki@1" },
         { "command": "sdd.wiki", "when": "viewItem == feature", "group": "inline" },
