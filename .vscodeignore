@@ -1,5 +1,4 @@
 test.js
 .gitignore
 *.vsix
-instalar.ps1
 instalar.cmd

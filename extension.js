@@ -215,22 +215,13 @@ function terminal(raiz, dir, comandos) {
   term.sendText(lib.juntar(comandos, shell));
 }
 
-function atualizarExtensao() {
-  const shell = vscode.env.shell || "";
-  const pasta = path.join(os.tmpdir(), `sdd-speckit-${Date.now()}`);
+/** Roda o instalar.ps1 que vai dentro do pacote (mesmo fluxo do instalar.cmd). */
+function atualizarExtensao(extensaoDir) {
   const editor = (vscode.env.appName || "").includes("Cursor") ? "cursor" : "code";
-  const pastaShell = lib.ehCmd(shell) ? pasta.replace(/\//g, "\\") : pasta.replace(/\\/g, "/");
-  const filtro = lib.ehCmd(shell) ? '"sdd-speckit-*.vsix"' : "'sdd-speckit-*.vsix'";
-  const gh = `gh release download -R Desenvolve-MT/sdd-vscode -p ${filtro} -D "${pastaShell}" --clobber`;
-  let instalar;
-  if (lib.ehPowerShell(shell)) {
-    instalar = `Get-ChildItem "${pastaShell}" -Filter *.vsix | ForEach-Object { ${editor} --install-extension $_.FullName --force }`;
-  } else if (lib.ehCmd(shell)) {
-    instalar = `for %f in ("${pastaShell}\\*.vsix") do ${editor} --install-extension "%~f" --force`;
-  } else {
-    instalar = `for f in "${pastaShell}"/*.vsix; do ${editor} --install-extension "$f" --force; done`;
-  }
-  terminal(os.tmpdir(), null, [`mkdir "${pastaShell}"`, gh, instalar]);
+  const script = path.join(extensaoDir, "instalar.ps1");
+  // Aspas duplas funcionam em PowerShell, cmd e bash; "&" só é exigido no PowerShell.
+  const prefixo = lib.ehPowerShell(vscode.env.shell) ? "& " : "";
+  terminal(os.tmpdir(), null, [`${prefixo}powershell -NoProfile -ExecutionPolicy Bypass -File "${script}" -Editor ${editor}`]);
   vscode.window.showInformationMessage("Quando o terminal terminar, recarregue a janela.", "Recarregar").then((escolha) => {
     if (escolha === "Recarregar") vscode.commands.executeCommand("workbench.action.reloadWindow");
   });
@@ -1007,7 +998,7 @@ function activate(ctx) {
       status.atualizar();
       form.enviarRepos();
     }),
-    vscode.commands.registerCommand("sdd.atualizarExtensao", atualizarExtensao),
+    vscode.commands.registerCommand("sdd.atualizarExtensao", () => atualizarExtensao(ctx.extensionPath)),
     vscode.commands.registerCommand("sdd.configurarLayout", () => vscode.commands.executeCommand("workbench.action.openSettings", "sdd.layout")),
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (!e.affectsConfiguration("sdd.layout")) return;

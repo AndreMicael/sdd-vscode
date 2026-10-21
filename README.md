@@ -5,7 +5,7 @@ comandos: mostra em que passo cada feature está, explica cada passo e chama a I
 
 ## Instalar
 
-1. Baixe ou clone este repositorio e clique duas vezes em **instalar.cmd** (requer o `gh` logado com acesso a `Desenvolve-MT`).
+1. Baixe ou clone este repositorio e clique duas vezes em **instalar.cmd** (usa o mesmo login do git que você usa para `git push` na Desenvolve-MT; o `gh` logado também serve).
    Para atualizar, clique no botao de nuvem no painel **Features** ou execute **SDD: Atualizar extensao**.
 
 1. Baixe o `sdd-speckit-X.Y.Z.vsix` da última **Release** deste repositório
