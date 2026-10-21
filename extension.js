@@ -770,6 +770,57 @@ async function executarPasso(passo, item, form) {
   await form.abrirPasso(passo, f);
 }
 
+async function excluirFeature(item, arvore, status, form) {
+  let f = item?.tipo === "feature" ? item : item?.raiz && item?.dir ? item : undefined;
+  if (!f) f = await escolherFeature(undefined);
+  if (!f) return;
+
+  const dir = path.resolve(f.dir);
+  const raiz = path.resolve(f.raiz);
+  const specs = path.join(raiz, "specs");
+  const nome = path.basename(dir);
+  if (!dir.startsWith(specs + path.sep) || !/^\d+-/.test(nome)) {
+    vscode.window.showErrorMessage("Feature inválida para exclusão.");
+    return;
+  }
+
+  const branch = lib.branchAtual(raiz);
+  // Branch solta em refs/heads ou compactada em packed-refs (depois de git gc).
+  const packed = path.join(raiz, ".git", "packed-refs");
+  const existeBranch =
+    fs.existsSync(path.join(raiz, ".git", "refs", "heads", nome)) ||
+    (fs.existsSync(packed) && fs.readFileSync(packed, "utf8").split(/\r?\n/).some((l) => l.endsWith(" refs/heads/" + nome)));
+  const branchAtual = branch === nome;
+  const podeApagarBranch = existeBranch && !branchAtual && /^[\w.-]+$/.test(nome);
+  let texto = `Excluir a feature ${nome}? A pasta specs/${nome} vai para a lixeira (da para recuperar).`;
+  if (branchAtual) {
+    texto += ` Voce esta na branch ${nome}; ela nao sera apagada (troque de branch antes, se quiser apaga-la).`;
+  }
+  const excluirComBranch = "Excluir pasta e branch";
+  const escolha = await vscode.window.showWarningMessage(
+    texto,
+    { modal: true },
+    "Excluir pasta",
+    ...(podeApagarBranch ? [excluirComBranch] : []),
+  );
+  if (!escolha) return;
+
+  try {
+    await vscode.workspace.fs.delete(vscode.Uri.file(dir), { recursive: true, useTrash: true });
+  } catch (e) {
+    vscode.window.showErrorMessage(`Não foi possível excluir a feature ${nome}: ${e instanceof Error ? e.message : String(e)}`);
+    return;
+  }
+  paineisWiki.get(dir)?.dispose();
+  if (escolha === excluirComBranch) {
+    terminal(raiz, null, [`git branch -D ${nome}`]);
+  }
+  arvore.atualizar();
+  status.atualizar();
+  form.enviarRepos();
+  vscode.window.showInformationMessage(`Feature ${nome} excluida.`);
+}
+
 /** @param {vscode.ExtensionContext} ctx */
 function activate(ctx) {
   const arvore = new Arvore();
@@ -818,6 +869,7 @@ function activate(ctx) {
       executarPasso(f.etapa.proximo, f, form);
     }),
     vscode.commands.registerCommand("sdd.wiki", (item) => abrirWiki(item)),
+    vscode.commands.registerCommand("sdd.excluirFeature", (item) => excluirFeature(item, arvore, status, form)),
     ...Object.keys(PASSOS).map((p) => vscode.commands.registerCommand(`sdd.${p}`, (item) => executarPasso(p, item, form))),
   );
 }

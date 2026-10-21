@@ -39,7 +39,7 @@ Para atualizar, instale o `.vsix` da versão nova do mesmo jeito (não há atual
   de `specs/` com a etapa de cada uma.
   - **+** no repositório: nova feature. **▶**: próximo passo. **📖**: wiki da feature.
   - **Botão direito** na feature: Wiki, Clarify, Checklist, Plan, Tasks, Analyze, Implement, Converge,
-    Enviar ao ClickUp.
+    Enviar ao ClickUp, Excluir (pasta vai para a lixeira; branch opcional).
   - Repositório sem Spec Kit aparece com aviso e botão para instalar (`specify init --here`;
     a constituição existente é preservada).
 - **Ação** — formulário com o seletor de **IA**, a descrição da nova feature e as instruções extras

@@ -2,7 +2,7 @@
   "name": "sdd-speckit",
   "displayName": "SDD (Spec Kit)",
   "description": "Painel do Spec Kit (SDD): em que passo cada feature está, wiki de cada passo e comandos /speckit-* no Claude Code, Cursor, Codex, OpenCode ou Antigravity.",
-  "version": "0.7.2",
+  "version": "0.8.0",
   "publisher": "desenvolve-mt",
   "license": "UNLICENSED",
   "engines": { "vscode": "^1.85.0" },
@@ -61,7 +61,8 @@
       { "command": "sdd.implement", "title": "SDD: Implement (implementar)" },
       { "command": "sdd.converge", "title": "SDD: Converge (o que falta)" },
       { "command": "sdd.taskstoclickup", "title": "SDD: Enviar ao ClickUp" },
-      { "command": "sdd.wiki", "title": "SDD: Wiki da feature", "icon": "$(book)" }
+      { "command": "sdd.wiki", "title": "SDD: Wiki da feature", "icon": "$(book)" },
+      { "command": "sdd.excluirFeature", "title": "SDD: Excluir feature", "icon": "$(trash)" }
     ],
     "menus": {
       "view/title": [
@@ -69,15 +70,20 @@
         { "command": "sdd.atualizar", "when": "view == sdd.features", "group": "navigation@2" },
         { "command": "sdd.wiki", "when": "view == sdd.status", "group": "navigation@1" }
       ],
-      "commandPalette": [{ "command": "sdd.instalarSpecKit", "when": "false" }],
+      "commandPalette": [
+        { "command": "sdd.instalarSpecKit", "when": "false" },
+        { "command": "sdd.excluirFeature" }
+      ],
       "view/item/context": [
         { "command": "sdd.novaFeature", "when": "viewItem == repo", "group": "inline" },
         { "command": "sdd.instalarSpecKit", "when": "viewItem == repoSemSpecKit", "group": "inline" },
         { "command": "sdd.wiki", "when": "viewItem == feature", "group": "0_wiki@1" },
         { "command": "sdd.wiki", "when": "viewItem == feature", "group": "inline" },
+        { "command": "sdd.excluirFeature", "when": "viewItem == feature", "group": "9_excluir@1" },
         { "command": "sdd.proximo", "when": "viewItem == feature", "group": "inline" },
         { "command": "sdd.wiki", "when": "view == sdd.status && viewItem == featureStatus", "group": "0_wiki@1" },
         { "command": "sdd.wiki", "when": "view == sdd.status && viewItem == featureStatus", "group": "inline" },
+        { "command": "sdd.excluirFeature", "when": "view == sdd.status && viewItem == featureStatus", "group": "9_excluir@1" },
         { "command": "sdd.clarify", "when": "viewItem == feature", "group": "1_spec@1" },
         { "command": "sdd.checklist", "when": "viewItem == feature", "group": "1_spec@2" },
         { "command": "sdd.plan", "when": "viewItem == feature", "group": "2_plano@1" },
