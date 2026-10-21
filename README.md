@@ -5,11 +5,11 @@ comandos: mostra em que passo cada feature está, explica cada passo e chama a I
 
 ## Instalar
 
-1. Baixe ou clone este repositorio e clique duas vezes em **instalar.cmd** (usa o mesmo login do git que você usa para `git push` na Desenvolve-MT; o `gh` logado também serve).
+1. Baixe ou clone este repositorio e clique duas vezes em **instalar.cmd** (usa o mesmo login do git que você usa para `git push`; o `gh` logado também serve).
    Para atualizar, clique no botao de nuvem no painel **Features** ou execute **SDD: Atualizar extensao**.
 
 1. Baixe o `sdd-speckit-X.Y.Z.vsix` da última **Release** deste repositório
-   (ou: `gh release download -R Desenvolve-MT/sdd-vscode -p "*.vsix"`).
+   (ou: `gh release download -R AndreMicael/sdd-vscode -p "*.vsix"`).
 2. Instale:
    - Cursor: `cursor --install-extension sdd-speckit-X.Y.Z.vsix`
    - VS Code: `code --install-extension sdd-speckit-X.Y.Z.vsix`

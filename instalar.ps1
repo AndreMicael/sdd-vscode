@@ -4,7 +4,7 @@ param(
   [string]$Editor
 )
 
-$repo = 'Desenvolve-MT/sdd-vscode'
+$repo = 'AndreMicael/sdd-vscode'
 $paginaRelease = "https://github.com/$repo/releases/latest"
 $ErrorActionPreference = 'Stop'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
