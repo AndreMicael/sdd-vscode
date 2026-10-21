@@ -59,15 +59,34 @@ skills do Spec Kit; a extensão só organiza e chama.
 - `sdd.agente`: IA padrão (`claude`, `cursor`, `codex`, `opencode`, `agy`). O seletor do painel grava aqui.
 - `sdd.listaClickUp`: lista sugerida em “Enviar ao ClickUp” (só Claude Code e Cursor têm essa skill).
 
-## Desenvolver e publicar uma versão
+## Gerar o .vsix depois de alterar o projeto
+
+Na pasta da extensão:
 
 ```powershell
-npm test
-# suba "version" no package.json
-npx @vscode/vsce package --allow-missing-repository
-cursor --install-extension sdd-speckit-X.Y.Z.vsix   # testar localmente
-git commit -am "..." ; git tag vX.Y.Z ; git push --follow-tags
-gh release create vX.Y.Z sdd-speckit-X.Y.Z.vsix --generate-notes
+cd D:\Workspaces\git-desenvolve\renegocia-dmt\sdd-vscode
+npm test                                                     # 1. confere que nada quebrou
+# 2. suba "version" no package.json (ex.: 0.7.0 → 0.7.1)
+npx @vscode/vsce package --allow-missing-repository          # 3. gera sdd-speckit-0.7.1.vsix
+cursor --install-extension sdd-speckit-0.7.1.vsix --force    # 4. instala no seu Cursor
 ```
+
+Depois recarregue a janela (Ctrl+Shift+P → *Developer: Reload Window*) e teste.
+
+- **Por que subir a versão:** o nome do arquivo sai da `version` do `package.json`. Sem mudar a
+  versão, o pacote novo sobrescreve o antigo com o mesmo nome e fica difícil saber quem tem qual.
+- **Formato:** correção → 0.7.1; recurso novo → 0.8.0.
+- No VS Code, troque `cursor` por `code` no passo 4.
+
+## Publicar a versão para o time
+
+Depois de testar:
+
+```powershell
+git commit -am "..." ; git tag v0.7.1 ; git push --follow-tags
+gh release create v0.7.1 sdd-speckit-0.7.1.vsix --generate-notes
+```
+
+Sem o `gh`: no GitHub, Releases → *Draft a new release* → escolha a tag e arraste o `.vsix`.
 
 O `.vsix` não vai para o git (está no `.gitignore`); ele é distribuído pela Release.
