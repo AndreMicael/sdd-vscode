@@ -114,6 +114,13 @@ function branchAtual(raiz) {
   }
 }
 
+function passoDoArquivo(nome) {
+  if (nome === "spec.md") return 1;
+  if (["plan.md", "research.md", "data-model.md", "quickstart.md"].includes(nome)) return 3;
+  if (nome === "tasks.md") return 4;
+  return null;
+}
+
 /**
  * Checklist do fluxo Spec Kit na pasta da feature.
  * estado ∈ feito | atual | pendente | opcional.
@@ -273,9 +280,19 @@ function juntar(comandos, shell) {
   return comandos.join(ehCmd(shell) ? " & " : "; ");
 }
 
+function comMarcador(prompt) {
+  return prompt + " Ao terminar, escreva a palavra pronto em maiúsculas, sozinha, na última linha.";
+}
+
+function temMarcador(texto) {
+  const limpo = String(texto || "").replace(/\x1b(?:\][^\x07\x1b]*(?:\x07|\x1b\\)|\[[0-?]*[ -/]*[@-~]|[@-Z\\-_])/g, "");
+  return /\bPRONTO\b/.test(limpo);
+}
+
 module.exports = {
-  contarTarefas, etapa, etapaDeArquivos, listarFeatures, featuresOutrasBranches, featureAtual, branchAtual, trilha, repositorios, proximoNumero, slug,
+  contarTarefas, passoDoArquivo, etapa, etapaDeArquivos, listarFeatures, featuresOutrasBranches, featureAtual, branchAtual, trilha, repositorios, proximoNumero, slug,
   comandoAgente, juntar, AGENTES, agente, invocacao, integracoes, workspaceDaUrl, lerClickUp, salvarClickUp,
   ehCmd, ehPowerShell,
   PASSOS_ORQ, promptOrquestrado, skillInstalada,
+  comMarcador, temMarcador,
 };

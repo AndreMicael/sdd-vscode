@@ -2,7 +2,7 @@
   "name": "sdd-speckit",
   "displayName": "SDD (Spec Kit)",
   "description": "Painel do Spec Kit (SDD): em que passo cada feature está, wiki de cada passo e comandos /speckit-* no Claude Code, Cursor, Codex, OpenCode ou Antigravity.",
-  "version": "0.13.1",
+  "version": "0.14.0",
   "publisher": "desenvolve-mt",
   "license": "UNLICENSED",
   "engines": { "vscode": "^1.85.0" },
@@ -65,6 +65,11 @@
           "enum": ["confortavel", "compacta"],
           "default": "confortavel",
           "description": "Define o espacamento das webviews."
+        },
+        "sdd.reaproveitarTerminal": {
+          "type": "boolean",
+          "default": false,
+          "description": "Roda o próximo passo da feature no mesmo terminal (e na mesma sessão da IA, se ela ainda estiver aberta). Precisa de shell integration (PowerShell, bash, zsh); no cmd.exe abre terminal novo."
         }
       }
     },

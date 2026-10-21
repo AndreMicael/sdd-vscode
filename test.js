@@ -11,6 +11,13 @@ test("contarTarefas", () => {
   assert.deepStrictEqual(t, { feitas: 2, total: 3 });
 });
 
+test("passoDoArquivo mapeia os arquivos do fluxo", () => {
+  assert.strictEqual(lib.passoDoArquivo("spec.md"), 1);
+  for (const nome of ["plan.md", "research.md", "data-model.md", "quickstart.md"]) assert.strictEqual(lib.passoDoArquivo(nome), 3);
+  assert.strictEqual(lib.passoDoArquivo("tasks.md"), 4);
+  assert.strictEqual(lib.passoDoArquivo("notes.md"), null);
+});
+
 test("featuresOutrasBranches encontra feature em branch local e respeita pasta local", (t) => {
   try {
     execFileSync("git", ["--version"], { encoding: "utf8", windowsHide: true });
@@ -164,4 +171,17 @@ test("branchAtual lê refs/heads ou devolve null", () => {
   assert.strictEqual(lib.branchAtual(raiz), "001-foo");
   fs.writeFileSync(path.join(raiz, ".git", "HEAD"), "abc123def\n");
   assert.strictEqual(lib.branchAtual(raiz), null);
+});
+
+test("comMarcador e temMarcador", () => {
+  const p = lib.comMarcador("/speckit-plan");
+  assert.strictEqual(
+    p,
+    "/speckit-plan Ao terminar, escreva a palavra pronto em maiúsculas, sozinha, na última linha.",
+  );
+  assert.strictEqual(lib.temMarcador(p), false);
+  assert.strictEqual(lib.temMarcador(lib.promptOrquestrado("orq", p)), false);
+  assert.strictEqual(lib.temMarcador("pronto\nPronto\nAPRONTOU\nPRONTOS"), false);
+  assert.strictEqual(lib.temMarcador("Tudo certo.\nPRONTO\n"), true);
+  assert.strictEqual(lib.temMarcador("\x1b]633;C\x07\x1b[1;32mPRONTO\x1b[0m\r\n"), true);
 });
