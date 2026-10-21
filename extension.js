@@ -8,6 +8,20 @@ const { execFile } = require("child_process");
 const { promisify } = require("util");
 const lib = require("./lib");
 const wiki = require("./wiki");
+const { createSpecifySetup } = require("./specify-setup");
+const { createPlatform, command: specifyCommand, sanitize } = require("./specify-platform");
+const { createStore } = require("./specify-store");
+let specifySetup;
+let specifyEnvironment;
+
+async function requireSpecify() {
+  const result = await specifySetup?.ensureReady();
+  if (!result?.ready) {
+    vscode.window.showWarningMessage(`Specify: ${result?.snapshot?.state || "checking"}. Use SDD: Preparar Specify ou SDD: Verificar Specify; consulte SDD: Abrir diagnóstico do Specify.`);
+    return null;
+  }
+  return result;
+}
 
 const PASSOS = {
   clarify: "Clarify (tirar dúvidas da spec)",
@@ -282,7 +296,7 @@ class Status {
 }
 
 /** Abre um terminal no repositório e roda os comandos (o último costuma ser o agente). */
-function terminal(raiz, dir, comandos) {
+function terminal(raiz, dir, comandos, preparedEnv) {
   const shell = vscode.env.shell;
   const term = vscode.window.createTerminal({
     name: `SDD: ${path.basename(dir || raiz)}`,
@@ -290,7 +304,7 @@ function terminal(raiz, dir, comandos) {
     // Mesmo shell usado para escapar as aspas em comandoAgente.
     shellPath: shell || undefined,
     // O Spec Kit usa esta variável para saber em qual feature trabalhar.
-    env: dir ? { SPECIFY_FEATURE_DIRECTORY: dir } : undefined,
+    env: { ...preparedEnv, ...(dir ? { SPECIFY_FEATURE_DIRECTORY: dir } : {}) },
   });
   term.show();
   term.sendText(lib.juntar(comandos, shell));
@@ -344,6 +358,8 @@ async function instalarOrq() {
 async function rodar(raiz, dir, passo, args, antes = [], id = agenteConfig(), modoMsg) {
   const a = lib.agente(id);
   if (!lib.integracoes(raiz).includes(a.integracao)) {
+    const prepared = await requireSpecify();
+    if (!prepared) return;
     const ok = await vscode.window.showWarningMessage(
       `${a.nome} ainda não tem os comandos do Spec Kit em ${path.basename(raiz)}. Instalar a integração agora?`,
       { modal: true },
@@ -351,7 +367,7 @@ async function rodar(raiz, dir, passo, args, antes = [], id = agenteConfig(), mo
     );
     if (ok !== "Instalar") return;
     // --force: algumas integrações (ex.: agy) não se declaram seguras para conviver com outras.
-    terminal(raiz, null, [`specify integration install ${a.integracao} --script ps --force`]);
+    terminal(raiz, dir, [specifyCommand(prepared.executable, ["integration", "install", a.integracao, "--script", process.platform === "win32" ? "ps" : "sh", "--force"], vscode.env.shell)], prepared.env);
     vscode.window.showInformationMessage("Quando a instalação terminar, clique de novo para rodar o comando.");
     return;
   }
@@ -430,6 +446,8 @@ async function rodar(raiz, dir, passo, args, antes = [], id = agenteConfig(), mo
 
 /** Instala o Spec Kit no repositório (o init preserva uma constituição já existente). */
 async function instalarSpecKit(raiz, id = agenteConfig()) {
+  const prepared = await requireSpecify();
+  if (!prepared) return false;
   const a = lib.agente(id);
   const ok = await vscode.window.showWarningMessage(
     `Instalar o Spec Kit em ${path.basename(raiz)} para ${a.nome}? Ele cria .specify/ e os comandos /speckit-* no repositório.`,
@@ -437,7 +455,7 @@ async function instalarSpecKit(raiz, id = agenteConfig()) {
     "Instalar",
   );
   if (ok !== "Instalar") return false;
-  terminal(raiz, null, [`specify init --here --integration ${a.integracao} --script ps`]);
+  terminal(raiz, null, [specifyCommand(prepared.executable, ["init", "--here", "--integration", a.integracao, "--script", process.platform === "win32" ? "ps" : "sh"], vscode.env.shell)], prepared.env);
   vscode.window.showInformationMessage("Confirme no terminal. Quando terminar, o repositório aparece no painel.");
   return true;
 }
@@ -1360,6 +1378,73 @@ function activate(ctx) {
     vscode.commands.registerCommand("sdd.excluirFeature", (item) => excluirFeature(item, arvore, status, form)),
     ...Object.keys(PASSOS).map((p) => vscode.commands.registerCommand(`sdd.${p}`, (item) => executarPasso(p, item, form))),
   );
+  activateSpecify(ctx, atualizar);
 }
 
-module.exports = { activate, deactivate() {} };
+function activateSpecify(ctx, refresh) {
+  const output = vscode.window.createOutputChannel("SDD: Specify");
+  const status = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 20);
+  status.command = "sdd.diagnosticoSpecify";
+  const platform = createPlatform({ editor: vscode.env.appName, remoteName: vscode.env.remoteName, uiKind: vscode.env.uiKind,
+    workspaceRoots: (vscode.workspace.workspaceFolders || []).map(folder => folder.uri.fsPath),
+    shell: vscode.env.shell, log: text => output.appendLine(sanitize(text)),
+    applyPath: bin => ctx.environmentVariableCollection.prepend("PATH", bin + path.delimiter),
+    openVerificationTerminal: options => {
+      const term = vscode.window.createTerminal({ name: "SDD: Verificar terminal Specify", shellPath: options.shell,
+        shellArgs: options.args, cwd: options.cwd, env: options.env });
+      term.show(); term.sendText(options.command); return term;
+    },
+    terminalProfile: () => {
+      const config = vscode.workspace.getConfiguration("terminal.integrated");
+      const key = process.platform === "win32" ? "windows" : process.platform === "darwin" ? "osx" : "linux";
+      const defaultProfile = config.get(`defaultProfile.${key}`);
+      const profile = (config.get(`profiles.${key}`) || {})[defaultProfile];
+      const shell = profile?.path || vscode.env.shell;
+      const env = { ...(config.get(`env.${key}`) || {}), ...profile?.env };
+      return { shell, args: Array.isArray(profile?.args) ? profile.args : [], env,
+        unverifiable: Array.isArray(shell) || typeof profile?.args === "string" || Object.values(env).some(v => typeof v === "string" && v.includes("${")) };
+    },
+  });
+  specifyEnvironment = platform.environment;
+  specifySetup = createSpecifySetup({ platform, store: createStore({ root: platform.environment.root, identity: platform.identity, liveness: platform.liveness }) });
+  const labels = { idle: "aguardando", checking: "verificando", installing: "instalando", ready: "pronto", failed: "falha", cancelled: "cancelado",
+    unsupported: "host não suportado", waiting: "outra janela preparando", incompatible: "incompatível", interrupted: "interrompido",
+    "verification-required": "verifique o terminal", "repair-required": "reparo necessário" };
+  ctx.subscriptions.push(output, status, specifySetup.subscribe(value => {
+    status.text = `Specify: ${labels[value.state] || value.state}`;
+    status.tooltip = `${value.stage || ""}: ${value.error?.message || "SDD: Abrir diagnóstico do Specify"}`;
+    status.show(); output.appendLine(sanitize(JSON.stringify(value)));
+    if (!["checking", "installing", "waiting"].includes(value.state)) refresh();
+  }), { dispose: () => { void specifySetup?.dispose(); } });
+  const execute = async (action, notify = false) => {
+    try {
+      const result = await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: "Preparando Specify", cancellable: true }, async (progress, token) => {
+        const sub = specifySetup.subscribe(s => progress.report({ message: `${labels[s.state] || s.state} · ${s.stage || ""}` }));
+        const cancel = token.onCancellationRequested(() => { void specifySetup.cancel(); });
+        try { return await action(); } finally { sub.dispose(); cancel.dispose(); }
+      });
+      if (notify && result?.state !== "ready") {
+        const choice = await vscode.window.showWarningMessage(`Specify: ${labels[result?.state] || result?.state}. ${result?.error?.message || "Consulte o diagnóstico."}`, "Tentar novamente", "Verificar novamente", "Instruções oficiais");
+        if (choice === "Tentar novamente") return execute(() => specifySetup.retry());
+        if (choice === "Verificar novamente") return execute(() => specifySetup.check());
+        if (choice === "Instruções oficiais") await vscode.env.openExternal(vscode.Uri.parse("https://github.github.io/spec-kit/installation.html"));
+      }
+      return result;
+    } catch (error) { output.appendLine(sanitize(error.stack || error.message)); status.text = "Specify: falha"; status.show(); }
+  };
+  const handlers = {
+    verificarSpecify: () => execute(() => specifySetup.check(), true),
+    prepararSpecify: () => execute(() => specifySetup.retry(), true),
+    repararSpecify: async () => {
+      const choice = await vscode.window.showWarningMessage("Criar/reparar uma cópia isolada do Specify e priorizá-la nos novos terminais deste editor? A instalação externa será preservada.", { modal: true }, "Reparar");
+      if (choice === "Reparar") return execute(() => specifySetup.repair(), true);
+    },
+    cancelarSpecify: () => specifySetup.cancel(),
+    diagnosticoSpecify: () => { output.appendLine(sanitize(JSON.stringify({ environment: specifyEnvironment, ...specifySetup.snapshot }, null, 2))); output.show(); },
+  };
+  for (const [name, handler] of Object.entries(handlers)) ctx.subscriptions.push(vscode.commands.registerCommand(`sdd.${name}`, handler));
+  // UI registration is complete before the first asynchronous probe.
+  void execute(() => specifySetup.check({ reason: "activation" }));
+}
+
+module.exports = { activate, deactivate: () => specifySetup?.dispose() };

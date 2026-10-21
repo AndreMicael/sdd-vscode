@@ -18,9 +18,55 @@ comandos: mostra em que passo cada feature está, explica cada passo e chama a I
 
 Para atualizar, instale o `.vsix` da versão nova do mesmo jeito (não há atualização automática).
 
-### Pré-requisitos
+### Preparação automática do Specify
 
-- **Spec Kit CLI** (`specify`): `uv tool install specify-cli --from git+https://github.com/github/spec-kit.git`
+Na primeira execução local, mesmo sem projeto aberto, a extensão verifica o Specify.
+Se ele estiver ausente, prepara **uv, Python 3.11 e specify-cli 1.2.2** no diretório
+de dados do usuário, sem administrador. Reutiliza uma instalação compatível sem
+atualizá-la. É necessário acesso HTTPS a Astral/GitHub (uv/Python) e PyPI
+(Specify e dependências); certificados TLS continuam obrigatórios.
+
+Os dados ficam em `%LOCALAPPDATA%/sdd-speckit` no Windows,
+`~/Library/Application Support/sdd-speckit` no macOS e
+`${XDG_DATA_HOME:-~/.local/share}/sdd-speckit` no Linux. VS Code, Cursor e seus
+perfis compartilham essa instalação e o controle de concorrência. O PATH recebe
+a cópia selecionada apenas no ambiente do editor; profiles e PATH global não são
+editados. Terminais antigos precisam ser reabertos. Cada janela verifica se seu
+shell resolve e executa a mesma cópia antes de mostrar **pronto**.
+
+A barra de status mostra a etapa e **SDD: Abrir diagnóstico do Specify** abre o
+registro. Pela paleta, inclusive sem workspace:
+
+- **SDD: Verificar Specify**: verifica novamente, sem instalar. Reconhece correções manuais.
+- **SDD: Preparar Specify (tentar novamente)**: tenta novamente após corrigir rede, permissão ou espaço em disco.
+- **SDD: Reparar Specify**: após confirmação, prepara uma cópia gerenciada e a prioriza no editor; preserva a externa.
+- **SDD: Cancelar preparação do Specify**: encerra a tentativa própria; numa janela observadora, cancela somente a espera.
+
+Falha, cancelamento, interrupção ou remoção do CLI não disparam reinstalação a cada
+reload. Uma instalação incompatível exige reparo explícito. Se aparecer **verifique
+o terminal**, reabra-o e use Verificar Specify; a verificação pode abrir um terminal
+dedicado. Profiles que redefinem PATH ou shells não reconhecidos permanecem pendentes.
+Os perfis tratados são PowerShell, cmd, bash, zsh e sh; a matriz de aceitação por
+editor/SO ainda precisa ser executada antes de declarar suporte validado.
+
+JSON de estado corrompido, esquema de versão desconhecido ou identidade de processo
+ambígua bloqueiam novas instalações. Consulte o diagnóstico e preserve esses arquivos
+para investigação; não apague um lock enquanto houver instaladores em execução.
+Para configuração manual, siga a [instalação oficial do Spec Kit](https://github.github.io/spec-kit/installation.html)
+e depois execute Verificar Specify. O [instalador oficial uv](https://docs.astral.sh/uv/reference/installer/)
+é usado com `UV_UNMANAGED_INSTALL` para manter o escopo no diretório gerenciado.
+
+SSH, WSL remoto e contêineres não recebem bootstrap local: prepare as ferramentas
+no destino apropriado. A extensão depende do host Node desktop e não executa no
+VS Code web. Falhas na preparação não impedem leitura de features/wiki nem o uso
+de agentes cuja integração já esteja no projeto.
+
+Preparar o CLI **não cria arquivos no projeto**. Inicializar Spec Kit ou adicionar
+integrações continua sendo uma ação explícita, confirmada no painel. Git e agentes
+de IA são instalados separadamente.
+
+### Outros pré-requisitos
+
 - **Pelo menos uma IA de terminal**, conforme a escolhida no painel:
 
   | IA | Comando que precisa existir |
