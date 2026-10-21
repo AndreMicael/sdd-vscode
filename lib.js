@@ -114,6 +114,13 @@ function branchAtual(raiz) {
   }
 }
 
+function passoDoArquivo(nome) {
+  if (nome === "spec.md") return 1;
+  if (["plan.md", "research.md", "data-model.md", "quickstart.md"].includes(nome)) return 3;
+  if (nome === "tasks.md") return 4;
+  return null;
+}
+
 /**
  * Checklist do fluxo Spec Kit na pasta da feature.
  * estado ∈ feito | atual | pendente | opcional.
@@ -197,6 +204,24 @@ const AGENTES = {
   agy: { nome: "Antigravity", exe: "agy -i", integracao: "agy", prefixo: "/speckit-" },
 };
 
+const PASSOS_ORQ = ["plan", "tasks", "analyze", "implement", "converge"];
+
+function promptOrquestrado(modo, prompt) {
+  return modo === "orq" || modo === "orq-lazy"
+    // Só o primeiro "/" da mensagem é expandido; o passo do Spec Kit é chamado pelo Claude via ferramenta Skill.
+    ? `/${modo} Execute ${prompt} seguindo o Spec Kit (chame a skill pela ferramenta Skill). No fim, mostre a tabela de tokens por IA.`
+    : prompt;
+}
+
+function skillInstalada(nome, home) {
+  return fs.existsSync(path.join(home, ".claude", "skills", nome, "SKILL.md"));
+}
+
+/** Claude + passo elegível + modo /orq ou /orq-lazy. */
+function aplicaOrquestracao(id, passo, modo) {
+  return id === "claude" && PASSOS_ORQ.includes(passo) && (modo === "orq" || modo === "orq-lazy");
+}
+
 const agente = (id) => AGENTES[id] || AGENTES.claude;
 
 /** Ex.: invocacao("codex", "plan", "só a fase 1") → "$speckit-plan só a fase 1". */
@@ -260,8 +285,19 @@ function juntar(comandos, shell) {
   return comandos.join(ehCmd(shell) ? " & " : "; ");
 }
 
+function comMarcador(prompt) {
+  return prompt + " Ao terminar, escreva a palavra pronto em maiúsculas, sozinha, na última linha.";
+}
+
+function temMarcador(texto) {
+  const limpo = String(texto || "").replace(/\x1b(?:\][^\x07\x1b]*(?:\x07|\x1b\\)|\[[0-?]*[ -/]*[@-~]|[@-Z\\-_])/g, "");
+  return /\bPRONTO\b/.test(limpo);
+}
+
 module.exports = {
-  contarTarefas, etapa, etapaDeArquivos, listarFeatures, featuresOutrasBranches, featureAtual, branchAtual, trilha, repositorios, proximoNumero, slug,
+  contarTarefas, passoDoArquivo, etapa, etapaDeArquivos, listarFeatures, featuresOutrasBranches, featureAtual, branchAtual, trilha, repositorios, proximoNumero, slug,
   comandoAgente, juntar, AGENTES, agente, invocacao, integracoes, workspaceDaUrl, lerClickUp, salvarClickUp,
   ehCmd, ehPowerShell,
+  PASSOS_ORQ, promptOrquestrado, skillInstalada, aplicaOrquestracao,
+  comMarcador, temMarcador,
 };

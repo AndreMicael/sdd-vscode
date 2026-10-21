@@ -4,6 +4,7 @@ dist/
 build/
 *.log
 .env*
-*.tmp
 .DS_Store
 Thumbs.db
+*.tmp
+*.swp

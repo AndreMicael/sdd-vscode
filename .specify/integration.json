@@ -2,14 +2,24 @@
   "version": "1.2.2",
   "integration_state_schema": 1,
   "installed_integrations": [
-    "codex"
+    "claude",
+    "codex",
+    "agy"
   ],
   "integration_settings": {
+    "claude": {
+      "script": "ps",
+      "invoke_separator": "-"
+    },
     "codex": {
+      "script": "ps",
+      "invoke_separator": "-"
+    },
+    "agy": {
       "script": "ps",
       "invoke_separator": "-"
     }
   },
-  "integration": "codex",
-  "default_integration": "codex"
+  "integration": "claude",
+  "default_integration": "claude"
 }

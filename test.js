@@ -27,6 +27,7 @@ function extensionFixture({ ready = false, integrations = [] } = {}) {
       showWarningMessage: async (_, options) => { if (options?.modal) events.push("prompt"); return "Instalar"; },
       showInformationMessage: async () => {}, showErrorMessage: async () => {},
       createTerminal: options => { terminals.push(options); return { show: noop, sendText: text => events.push(text) }; },
+      onDidCloseTerminal: () => disposable,
     },
     workspace: { workspaceFolders: [], getConfiguration: () => ({ get: () => undefined }),
       createFileSystemWatcher: () => ({ ...disposable, onDidCreate: noop, onDidChange: noop, onDidDelete: noop }),
@@ -71,6 +72,13 @@ test("existing agent integration stays usable and preserves feature environment"
 test("contarTarefas", () => {
   const t = lib.contarTarefas("- [X] T001 a\n- [x] T002 [P] b\n- [ ] T003 c\n- [ ] sem id\n");
   assert.deepStrictEqual(t, { feitas: 2, total: 3 });
+});
+
+test("passoDoArquivo mapeia os arquivos do fluxo", () => {
+  assert.strictEqual(lib.passoDoArquivo("spec.md"), 1);
+  for (const nome of ["plan.md", "research.md", "data-model.md", "quickstart.md"]) assert.strictEqual(lib.passoDoArquivo(nome), 3);
+  assert.strictEqual(lib.passoDoArquivo("tasks.md"), 4);
+  assert.strictEqual(lib.passoDoArquivo("notes.md"), null);
 });
 
 test("featuresOutrasBranches encontra feature em branch local e respeita pasta local", (t) => {
@@ -169,6 +177,25 @@ test("invocacao e integracoes por IA", () => {
   assert.deepStrictEqual(lib.integracoes(raiz), ["claude", "cursor-agent"]);
 });
 
+test("orquestracao e skills", () => {
+  assert.deepStrictEqual(lib.PASSOS_ORQ, ["plan", "tasks", "analyze", "implement", "converge"]);
+  assert.strictEqual(
+    lib.promptOrquestrado("orq", "/speckit-implement so fase 1"),
+    "/orq Execute /speckit-implement so fase 1 seguindo o Spec Kit (chame a skill pela ferramenta Skill). No fim, mostre a tabela de tokens por IA.",
+  );
+  const prompt = "x";
+  assert.strictEqual(lib.promptOrquestrado("desligada", prompt), prompt);
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), "sdd-orq-"));
+  assert.strictEqual(lib.skillInstalada("orq", home), false);
+  fs.mkdirSync(path.join(home, ".claude", "skills", "orq"), { recursive: true });
+  fs.writeFileSync(path.join(home, ".claude", "skills", "orq", "SKILL.md"), "# orq\n");
+  assert.strictEqual(lib.skillInstalada("orq", home), true);
+  assert.strictEqual(lib.aplicaOrquestracao("claude", "plan", "orq"), true);
+  assert.strictEqual(lib.aplicaOrquestracao("claude", "clarify", "orq"), false);
+  assert.strictEqual(lib.aplicaOrquestracao("cursor", "plan", "orq"), false);
+  assert.strictEqual(lib.aplicaOrquestracao("claude", "plan", "desligada"), false);
+});
+
 test("ClickUp: valida, grava e relê o vínculo", () => {
   const raiz = fs.mkdtempSync(path.join(os.tmpdir(), "sdd-clickup-"));
   assert.strictEqual(lib.workspaceDaUrl("https://app.clickup.com/90132384077/v/l/f/1000270000010285"), "90132384077");
@@ -211,4 +238,17 @@ test("branchAtual lê refs/heads ou devolve null", () => {
   assert.strictEqual(lib.branchAtual(raiz), "001-foo");
   fs.writeFileSync(path.join(raiz, ".git", "HEAD"), "abc123def\n");
   assert.strictEqual(lib.branchAtual(raiz), null);
+});
+
+test("comMarcador e temMarcador", () => {
+  const p = lib.comMarcador("/speckit-plan");
+  assert.strictEqual(
+    p,
+    "/speckit-plan Ao terminar, escreva a palavra pronto em maiúsculas, sozinha, na última linha.",
+  );
+  assert.strictEqual(lib.temMarcador(p), false);
+  assert.strictEqual(lib.temMarcador(lib.promptOrquestrado("orq", p)), false);
+  assert.strictEqual(lib.temMarcador("pronto\nPronto\nAPRONTOU\nPRONTOS"), false);
+  assert.strictEqual(lib.temMarcador("Tudo certo.\nPRONTO\n"), true);
+  assert.strictEqual(lib.temMarcador("\x1b]633;C\x07\x1b[1;32mPRONTO\x1b[0m\r\n"), true);
 });
