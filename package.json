@@ -2,7 +2,7 @@
   "name": "sdd-speckit",
   "displayName": "SDD (Spec Kit)",
   "description": "Painel do Spec Kit (SDD): em que passo cada feature está, wiki de cada passo e comandos /speckit-* no Claude Code, Cursor, Codex, OpenCode ou Antigravity.",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "publisher": "desenvolve-mt",
   "license": "UNLICENSED",
   "engines": { "vscode": "^1.85.0" },
@@ -45,6 +45,19 @@
           "type": "string",
           "default": "",
           "description": "Lista do ClickUp sugerida em \"Enviar ao ClickUp\" (ex.: Sprint 1 (14/10 - 3/11))."
+        },
+        "sdd.layout.colunas": {
+          "type": "string",
+          "enum": ["auto", "1", "2"],
+          "default": "auto",
+          "enumDescriptions": ["Duas colunas quando houver espaco", "Sempre uma coluna", "Sempre duas colunas"],
+          "description": "Define quantas colunas as webviews usam."
+        },
+        "sdd.layout.densidade": {
+          "type": "string",
+          "enum": ["confortavel", "compacta"],
+          "default": "confortavel",
+          "description": "Define o espacamento das webviews."
         }
       }
     },
@@ -66,14 +79,16 @@
       { "command": "sdd.converge", "title": "SDD: Converge (o que falta)" },
       { "command": "sdd.taskstoclickup", "title": "SDD: Enviar ao ClickUp" },
       { "command": "sdd.wiki", "title": "SDD: Wiki da feature", "icon": "$(book)" },
-      { "command": "sdd.excluirFeature", "title": "SDD: Excluir feature", "icon": "$(trash)" }
+      { "command": "sdd.excluirFeature", "title": "SDD: Excluir feature", "icon": "$(trash)" },
+      { "command": "sdd.configurarLayout", "title": "SDD: Layout do painel", "icon": "$(settings-gear)" }
     ],
     "menus": {
       "view/title": [
         { "command": "sdd.novaFeature", "when": "view == sdd.features", "group": "navigation@1" },
         { "command": "sdd.atualizar", "when": "view == sdd.features", "group": "navigation@2" },
         { "command": "sdd.buscarEquipe", "when": "view == sdd.features", "group": "navigation@3" },
-        { "command": "sdd.wiki", "when": "view == sdd.status", "group": "navigation@1" }
+        { "command": "sdd.wiki", "when": "view == sdd.status", "group": "navigation@1" },
+        { "command": "sdd.configurarLayout", "when": "view == sdd.form", "group": "navigation@1" }
       ],
       "commandPalette": [
         { "command": "sdd.instalarSpecKit", "when": "false" },

@@ -397,6 +397,54 @@ function listarArquivosWiki(dir, base = dir, nivel = 0) {
 /** @type {Map<string, vscode.WebviewPanel>} */
 const paineisWiki = new Map();
 
+function classesLayout() {
+  const config = vscode.workspace.getConfiguration("sdd.layout");
+  const colunas = config.get("colunas", "auto");
+  const densidade = config.get("densidade", "confortavel");
+  return `colunas-${["auto", "1", "2"].includes(colunas) ? colunas : "auto"} densidade-${densidade === "compacta" ? "compacta" : "confortavel"}`;
+}
+
+function cssBase(largo = false) {
+  return `
+  :root {
+    --gap: 12px;
+    --pad: 14px;
+    --raio: 6px;
+    --borda: var(--vscode-widget-border, var(--vscode-input-border, transparent));
+    --fundo-card: var(--vscode-sideBar-background, var(--vscode-editor-background));
+    --suave: var(--vscode-descriptionForeground);
+  }
+  body.densidade-compacta { --gap: 6px; --pad: 8px; }
+  * { box-sizing: border-box; }
+  body {
+    container-type: inline-size;
+    font-family: var(--vscode-font-family);
+    color: var(--vscode-foreground);
+    background: var(--vscode-editor-background);
+    margin: 0;
+    padding: var(--pad);
+    line-height: 1.5;
+  }
+  .grade { display: grid; gap: var(--gap); grid-template-columns: 1fr; }
+  .grade > .inteira { grid-column: 1 / -1; }
+  body.colunas-2 .grade { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  ${largo ? "@container (min-width: 720px) { body.colunas-auto .grade-larga { grid-template-columns: repeat(2, minmax(0, 1fr)); } .tarefas { columns: 2; } }" : "@container (min-width: 380px) { body.colunas-auto .grade { grid-template-columns: repeat(2, minmax(0, 1fr)); } }"}
+  .card { background: var(--fundo-card); border: 1px solid var(--borda); border-radius: var(--raio); padding: var(--pad); }
+  label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--suave); margin: 0 0 4px; }
+  select, input, textarea { width: 100%; box-sizing: border-box; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border); padding: 6px 8px; border-radius: 4px; font-family: inherit; }
+  select:focus, input:focus, textarea:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
+  textarea { resize: vertical; }
+  button, button.sec { border-radius: 4px; padding: 6px 12px; cursor: pointer; font-family: inherit; }
+  button { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: 1px solid transparent; }
+  button:hover { background: var(--vscode-button-hoverBackground); }
+  button.sec { background: transparent; color: var(--vscode-foreground); border: 1px solid var(--borda); }
+  @container (max-width: 279px) { button { width: 100%; } }
+  a { color: var(--vscode-textLink-foreground); }
+  code { font-family: var(--vscode-editor-font-family, monospace); background: var(--vscode-textCodeBlock-background, var(--vscode-input-background)); padding: 1px 4px; border-radius: 3px; }
+  ul { padding-left: 1.2em; }
+  `;
+}
+
 /** @param {vscode.Webview} webview @param {{ raiz: string, nome: string, dir: string }} f */
 function htmlWiki(webview, f) {
   const nonce = crypto.randomBytes(16).toString("base64");
@@ -419,7 +467,7 @@ function htmlWiki(webview, f) {
     const w = wiki.PASSOS[p.passo];
     if (!w) return "";
     const aberto = p.estado === "atual" ? " open" : "";
-    return `<details class="passo ${esc(p.estado)}"${aberto}>
+    return `<details class="card passo ${esc(p.estado)}${p.estado === "atual" ? " inteira" : ""}"${aberto}>
 <summary><span class="selo">${SELO[p.estado] || "○"}</span> <strong>${esc(p.titulo)}</strong> — ${esc(w.resumo)}</summary>
 <div class="corpo">
 <p>${esc(w.explicacao)}</p>
@@ -441,9 +489,9 @@ ${p.passo === "specify" ? "" : `<button type="button" data-executar="${esc(p.pas
     const re = /^\s*- \[([ xX])\] (T\d{3,}.*)$/gm;
     let m;
     while ((m = re.exec(texto))) {
-      itens.push(`<li>${m[1] !== " " ? "☑" : "☐"} ${esc(m[2])}</li>`);
+      itens.push(`<li class="${m[1] !== " " ? "feita" : ""}">${m[1] !== " " ? "☑" : "☐"} ${esc(m[2])}</li>`);
     }
-    tarefasHtml = `<section><h2>Tarefas</h2>
+    tarefasHtml = `<section class="card"><h2>Tarefas</h2>
 <p>${cont.feitas}/${cont.total} feitas</p>
 <ul class="tarefas">${itens.join("")}</ul></section>`;
   }
@@ -455,12 +503,12 @@ ${p.passo === "specify" ? "" : `<button type="button" data-executar="${esc(p.pas
   const glossario = wiki.GLOSSARIO.map(([t, d]) => `<dt>${esc(t)}</dt><dd>${esc(d)}</dd>`).join("");
 
   const cardAtual = atual && wAtual
-    ? `<section class="atual"><h2>Onde você está</h2>
+    ? `<section class="card atual"><h2>Onde você está</h2>
 <p><strong>${esc(atual.titulo)}</strong></p>
 <p>${esc(wAtual.resumo)}</p>
 <button type="button" data-executar="${esc(atual.passo)}">Executar ${esc(atual.titulo)}</button>
 </section>`
-    : `<section class="atual"><h2>Onde você está</h2><p>Fluxo concluído — não há passo pendente.</p></section>`;
+    : `<section class="card atual"><h2>Onde você está</h2><p>Fluxo concluído — não há passo pendente.</p></section>`;
 
   return `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -530,29 +578,58 @@ ${p.passo === "specify" ? "" : `<button type="button" data-executar="${esc(p.pas
   dt { font-weight: 600; margin-top: 10px; }
   dd { margin: 2px 0 0 1em; opacity: .9; }
   .tarefas { list-style: none; padding-left: 0; }
+  /* Layout comum e cartões da wiki. */
+  ${cssBase(true)}
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  .cabecalho { margin-bottom: var(--gap); }
+  .meta { color: var(--suave); opacity: 1; }
+  .barra { display: flex; gap: 3px; width: 100%; padding: 0; background: transparent; color: inherit; margin: 8px 0 4px; }
+  .segmento { height: 7px; flex: 1; background: var(--borda); border-radius: 2px; }
+  .segmento.feito { background: var(--vscode-charts-green, var(--vscode-button-background)); }
+  .segmento.atual { background: var(--vscode-charts-yellow, var(--vscode-focusBorder)); }
+  .progresso { margin: 0; color: var(--suave); font-size: .9em; }
+  .card { margin: 0; }
+  .atual { border-left: 3px solid var(--vscode-charts-yellow, var(--vscode-focusBorder)); }
+  details.passo { margin: 0; padding: var(--pad); min-width: 0; }
+  details.passo.atual { border-color: var(--vscode-focusBorder); }
+  .grade-larga { display: grid; grid-template-columns: 1fr; gap: var(--gap); }
+  .grade-larga > .inteira { grid-column: 1 / -1; }
+  body.colunas-2 .grade-larga { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  @container (min-width: 720px) { body.colunas-auto .grade-larga { grid-template-columns: repeat(2, minmax(0, 1fr)); } .tarefas { columns: 2; } }
+  .tarefas li { break-inside: avoid; }
+  .tarefas .feita { text-decoration: line-through; color: var(--suave); }
+  dl { margin: 0; }
+  dt { font-weight: 600; margin-top: 10px; }
+  dt:first-child { margin-top: 0; }
+  dd { margin: 2px 0 0 1em; color: var(--suave); }
 </style>
 </head>
-<body>
+<body class="${classesLayout()}">
 <div class="wrap">
-  <header>
+  <header class="card cabecalho">
     <h1>${esc(f.nome)}</h1>
     <p class="meta">Repositório: ${esc(path.basename(f.raiz))} · Branch: ${esc(branch)}</p>
-    <div class="barra">${esc(progresso)}</div>
+    <div class="barra" aria-label="Progresso">${trilha.map((p) => `<span class="segmento ${esc(p.estado)}" title="${esc(p.titulo)}"></span>`).join("")}</div>
+    <p class="progresso">${esc(progresso)}</p>
   </header>
   ${cardAtual}
   <section>
     <h2>O fluxo, passo a passo</h2>
+    <div class="grade-larga">
     ${trilha.map(blocoPasso).join("")}
+    </div>
   </section>
   ${tarefasHtml}
-  <section>
+  <div class="grade">
+  <section class="card">
     <h2>Arquivos da feature</h2>
     <ul>${arquivos || "<li>(nenhum arquivo)</li>"}</ul>
   </section>
-  <section>
+  <section class="card">
     <h2>Glossário</h2>
     <dl>${glossario}</dl>
   </section>
+  </div>
 </div>
 <script nonce="${nonce}">
 const vscode = acquireVsCodeApi();
@@ -661,26 +738,45 @@ function htmlForm(webview) {
   #erro { color: var(--vscode-errorForeground); margin-top: 8px; min-height: 1.2em; }
   h3 { margin: 0 0 8px; font-size: 1em; font-weight: 600; }
   .oculto { display: none; }
+  ${cssBase(false)}
+  #modo-nova, #modo-passo { display: block; }
+  #modo-nova.card, #modo-passo.card { display: grid; gap: var(--gap); }
+  #modo-nova.card.oculto, #modo-passo.card.oculto { display: none; }
+  #modo-nova.card > h3, #modo-passo.card > h3 { grid-column: 1 / -1; }
+  #modo-nova.card { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #modo-nova.card > label[for="descricao"], #modo-nova.card > textarea, #modo-nova.card > .botoes { grid-column: 1 / -1; }
+  #modo-nova.card > label[for="repo"] { grid-column: 1; }
+  #modo-nova.card > #repo { grid-column: 1; }
+  #modo-nova.card > label[for="branch"] { grid-column: 2; grid-row: 2; }
+  #modo-nova.card > #branch { grid-column: 2; grid-row: 3; }
+  .botoes { margin-top: 0; display: flex; gap: var(--gap); flex-wrap: wrap; }
+  .botoes button { flex: 1; }
+  #erro:not(:empty)::before { content: "⚠ "; }
+  .dica { color: var(--suave); font-size: 11px; grid-column: 1 / -1; }
+  .pill { display: inline-block; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); border-radius: 999px; padding: 2px 8px; font-size: 11px; }
 </style>
 </head>
-<body>
+<body class="${classesLayout()}">
+  <div class="card seletor-ia">
   <label for="agente">IA</label>
   <select id="agente">
     ${Object.entries(lib.AGENTES).map(([id, a]) => `<option value="${id}">${a.nome}</option>`).join("")}
   </select>
-  <div id="modo-nova">
+  </div>
+  <div id="modo-nova" class="card">
     <h3>Nova feature</h3>
     <label for="repo">Repositório</label>
     <select id="repo"></select>
     <label for="descricao">O que você quer construir e por quê? (sem falar de tecnologia)</label>
     <textarea id="descricao" rows="5" placeholder="ex.: O cidadão precisa baixar o comprovante do PIX de entrada depois de pago"></textarea>
+    <small class="dica">Ctrl+Enter para criar</small>
     <label for="branch">Nome curto da branch (opcional)</label>
     <input id="branch" type="text" placeholder="ex.: comprovante-pix">
     <div class="botoes"><button id="criar" type="button">Criar feature</button></div>
   </div>
-  <div id="modo-passo" class="oculto">
+  <div id="modo-passo" class="card oculto">
     <h3 id="titulo-passo"></h3>
-    <p id="nome-feature" style="margin:0 0 8px;opacity:.85"></p>
+    <p id="nome-feature" class="pill"></p>
     <label for="args" id="label-args">Instruções extras (opcional)</label>
     <textarea id="args" rows="5"></textarea>
     <div id="bloco-lista" class="oculto">
@@ -888,6 +984,15 @@ function activate(ctx) {
       arvore.atualizar();
       status.atualizar();
       form.enviarRepos();
+    }),
+    vscode.commands.registerCommand("sdd.configurarLayout", () => vscode.commands.executeCommand("workbench.action.openSettings", "sdd.layout")),
+    vscode.workspace.onDidChangeConfiguration((e) => {
+      if (!e.affectsConfiguration("sdd.layout")) return;
+      if (form.view) {
+        form.view.webview.html = htmlForm(form.view.webview);
+        form.enviarRepos();
+      }
+      atualizarPaineisWiki();
     }),
     vscode.commands.registerCommand("sdd.vincularClickUp", async (item) => {
       let raiz = item?.raiz;

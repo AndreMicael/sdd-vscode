@@ -59,6 +59,10 @@ skills do Spec Kit; a extensão só organiza e chama.
 
 - `sdd.agente`: IA padrão (`claude`, `cursor`, `codex`, `opencode`, `agy`). O seletor do painel grava aqui.
 - `sdd.listaClickUp`: lista sugerida em “Enviar ao ClickUp” (só Claude Code e Cursor têm essa skill).
+- `sdd.layout.colunas`: layout das webviews (`auto`, `1` ou `2`); `auto` usa duas colunas quando houver espaço.
+- `sdd.layout.densidade`: espaçamento (`confortavel` ou `compacta`).
+
+O botão de engrenagem **SDD: Layout do painel**, no título da view **Ação**, abre essas configurações diretamente.
 
 ### ClickUp (opcional)
 
