@@ -323,7 +323,7 @@ async function instalarOrq() {
     for (const entrada of fs.readdirSync(path.join(tmp, "skills"), { withFileTypes: true })) {
       if (entrada.isDirectory()) fs.cpSync(path.join(tmp, "skills", entrada.name), path.join(destino, entrada.name), { recursive: true, force: true });
     }
-    vscode.window.showInformationMessage("Skills /orq, /orq-lazy e /cursor-agent instaladas. Elas valem nas proximas sessoes do Claude Code.");
+    vscode.window.showInformationMessage("Skills /orq, /orq-lazy e /cursor-agent instaladas. Voce pode rodá-las agora nesta execução ou nas próximas.");
     return true;
   } catch (e) {
     vscode.window.showErrorMessage("Nao foi possivel instalar as skills: " + (e instanceof Error ? e.message : String(e)));
@@ -341,7 +341,7 @@ async function instalarOrq() {
  * Chama a IA escolhida com o comando do Spec Kit (`passo` = specify, plan...).
  * Se a integração dessa IA ainda não está no repositório, oferece instalar e não roda.
  */
-async function rodar(raiz, dir, passo, args, antes = [], id = agenteConfig()) {
+async function rodar(raiz, dir, passo, args, antes = [], id = agenteConfig(), modoMsg) {
   const a = lib.agente(id);
   if (!lib.integracoes(raiz).includes(a.integracao)) {
     const ok = await vscode.window.showWarningMessage(
@@ -358,8 +358,10 @@ async function rodar(raiz, dir, passo, args, antes = [], id = agenteConfig()) {
   const reaproveitar = reaproveitarConfig();
   let prompt = lib.invocacao(id, passo, args);
   if (reaproveitar) prompt = lib.comMarcador(prompt);
-  const modo = vscode.workspace.getConfiguration("sdd").get("orquestracao") || "desligada";
-  if (id === "claude" && lib.PASSOS_ORQ.includes(passo) && (modo === "orq" || modo === "orq-lazy")) {
+  const modos = ["desligada", "orq", "orq-lazy"];
+  const modo = modos.includes(modoMsg) ? modoMsg : (vscode.workspace.getConfiguration("sdd").get("orquestracao") || "desligada");
+  let usarSkill = false;
+  if (lib.aplicaOrquestracao(id, passo, modo)) {
     if (!lib.skillInstalada(modo, os.homedir())) {
       const escolha = await vscode.window.showWarningMessage(
         `A skill /${modo} nao esta instalada nesta maquina. Instalar agora? (baixa de github.com/AndreMicael/orq-skill)`,
@@ -369,9 +371,25 @@ async function rodar(raiz, dir, passo, args, antes = [], id = agenteConfig()) {
       );
       if (escolha === "Instalar") {
         if (!(await instalarOrq())) return;
-      } else if (escolha !== "Rodar sem orquestracao") return;
+        const agora = await vscode.window.showInformationMessage(
+          `Skill /${modo} instalada. Rodar agora com a skill?`,
+          { modal: true },
+          "Rodar agora com skill",
+          "Depois",
+        );
+        if (agora !== "Rodar agora com skill") return;
+        usarSkill = true;
+      } else if (escolha !== "Rodar sem orquestracao") {
+        return;
+      }
+      // "Rodar sem": segue sem prefixo e sem alterar sdd.orquestracao.
+    } else {
+      usarSkill = true;
     }
-    if (lib.skillInstalada(modo, os.homedir())) prompt = lib.promptOrquestrado(modo, prompt);
+    if (usarSkill && lib.skillInstalada(modo, os.homedir())) {
+      vscode.window.showInformationMessage(`Aplicando /${modo}…`);
+      prompt = lib.promptOrquestrado(modo, prompt);
+    }
   }
   const shell = vscode.env.shell;
   if (!reaproveitar) {
@@ -527,7 +545,11 @@ class Formulario {
       return;
     }
     if (m.tipo === "executar") {
-      await rodar(m.raiz, m.dir, m.passo, m.args, [], m.agente);
+      const modos = ["desligada", "orq", "orq-lazy"];
+      if (modos.includes(m.orquestracao)) {
+        await vscode.workspace.getConfiguration("sdd").update("orquestracao", m.orquestracao, vscode.ConfigurationTarget.Global);
+      }
+      await rodar(m.raiz, m.dir, m.passo, m.args, [], m.agente, m.orquestracao);
     }
   }
 }
@@ -1051,7 +1073,7 @@ function criar() {
 function executar() {
   if (!passoAtual || !featureAtual) return;
   const args = passoAtual === "taskstoclickup" ? el("lista").value : el("args").value;
-  vscode.postMessage({ tipo: "executar", passo: passoAtual, raiz: featureAtual.raiz, dir: featureAtual.dir, args, agente: el("agente").value });
+  vscode.postMessage({ tipo: "executar", passo: passoAtual, raiz: featureAtual.raiz, dir: featureAtual.dir, args, agente: el("agente").value, orquestracao: el("orquestracao").value });
 }
 
 el("agente").addEventListener("change", () => {
