@@ -2,7 +2,7 @@
   "name": "sdd-speckit",
   "displayName": "SDD (Spec Kit)",
   "description": "Painel do Spec Kit (SDD): em que passo cada feature está, wiki de cada passo e comandos /speckit-* no Claude Code, Cursor, Codex, OpenCode ou Antigravity.",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "publisher": "desenvolve-mt",
   "license": "UNLICENSED",
   "engines": { "vscode": "^1.85.0" },
@@ -51,6 +51,8 @@
     "commands": [
       { "command": "sdd.novaFeature", "title": "SDD: Nova feature", "icon": "$(add)" },
       { "command": "sdd.atualizar", "title": "SDD: Atualizar", "icon": "$(refresh)" },
+      { "command": "sdd.vincularClickUp", "title": "SDD: Vincular ClickUp ao repositorio", "icon": "$(link)" },
+      { "command": "sdd.abrirClickUp", "title": "SDD: Abrir no ClickUp", "icon": "$(link-external)" },
       { "command": "sdd.abrirBranch", "title": "SDD: Abrir branch da feature", "icon": "$(git-branch)" },
       { "command": "sdd.buscarEquipe", "title": "SDD: Buscar features da equipe (git fetch)", "icon": "$(cloud-download)" },
       { "command": "sdd.instalarSpecKit", "title": "SDD: Instalar Spec Kit neste repositório", "icon": "$(cloud-download)" },
@@ -79,6 +81,10 @@
       ],
       "view/item/context": [
         { "command": "sdd.novaFeature", "when": "viewItem == repo", "group": "inline" },
+        { "command": "sdd.abrirClickUp", "when": "viewItem == repo", "group": "inline" },
+        { "command": "sdd.abrirClickUp", "when": "viewItem == repo", "group": "5_clickup@1" },
+        { "command": "sdd.vincularClickUp", "when": "viewItem == repo", "group": "5_clickup@2" },
+        { "command": "sdd.abrirClickUp", "when": "viewItem == feature", "group": "4_clickup@2" },
         { "command": "sdd.abrirBranch", "when": "viewItem == featureOutraBranch", "group": "inline" },
         { "command": "sdd.abrirBranch", "when": "viewItem == featureOutraBranch", "group": "0_branch@1" },
         { "command": "sdd.instalarSpecKit", "when": "viewItem == repoSemSpecKit", "group": "inline" },

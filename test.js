@@ -107,6 +107,20 @@ test("invocacao e integracoes por IA", () => {
   assert.deepStrictEqual(lib.integracoes(raiz), ["claude", "cursor-agent"]);
 });
 
+test("ClickUp: valida, grava e relê o vínculo", () => {
+  const raiz = fs.mkdtempSync(path.join(os.tmpdir(), "sdd-clickup-"));
+  assert.strictEqual(lib.workspaceDaUrl("https://app.clickup.com/90132384077/v/l/f/1000270000010285"), "90132384077");
+  assert.strictEqual(lib.workspaceDaUrl("http://app.clickup.com/90132384077/v/l/f/1"), null);
+  assert.strictEqual(lib.workspaceDaUrl("https://example.com/90132384077/v/l/f/1"), null);
+  assert.strictEqual(lib.workspaceDaUrl("https://app.clickup.com/abc/v/l/f/1"), null);
+  assert.strictEqual(lib.lerClickUp(raiz), null);
+  assert.throws(() => lib.salvarClickUp(raiz, "http://app.clickup.com/90132384077/v/l/f/1"), /Link do ClickUp invalido/);
+  const url = "https://app.clickup.com/90132384077/v/l/f/1000270000010285";
+  assert.deepStrictEqual(lib.salvarClickUp(raiz, url), { workspace_id: "90132384077", url });
+  assert.deepStrictEqual(lib.lerClickUp(raiz), { workspace_id: "90132384077", url });
+  assert.strictEqual(fs.readFileSync(path.join(raiz, ".specify", "clickup.json"), "utf8"), JSON.stringify({ workspace_id: "90132384077", url }, null, 2) + "\n");
+});
+
 test("trilha: specify atual; com spec+plan → tasks atual; Clarifications → clarify feito", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "sdd-"));
   let t = lib.trilha(dir);

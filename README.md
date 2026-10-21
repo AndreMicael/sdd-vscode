@@ -60,6 +60,10 @@ skills do Spec Kit; a extensão só organiza e chama.
 - `sdd.agente`: IA padrão (`claude`, `cursor`, `codex`, `opencode`, `agy`). O seletor do painel grava aqui.
 - `sdd.listaClickUp`: lista sugerida em “Enviar ao ClickUp” (só Claude Code e Cursor têm essa skill).
 
+### ClickUp (opcional)
+
+Botão direito no repositório > **Vincular ClickUp** e cole o link da pasta/lista do projeto. Isso cria `.specify/clickup.json`; commite o arquivo para a equipe. **Abrir no ClickUp** leva ao workspace certo. Sem ClickUp vinculado, **Enviar ao ClickUp** não envia nada: basta commitar o código.
+
 ## Gerar o .vsix depois de alterar o projeto
 
 Na pasta da extensão:

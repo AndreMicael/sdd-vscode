@@ -214,6 +214,37 @@ function integracoes(raiz) {
   }
 }
 
+/** Extrai o workspace de um link HTTPS do ClickUp. */
+function workspaceDaUrl(url) {
+  if (typeof url !== "string") return null;
+  const m = /^https:\/\/app\.clickup\.com\/(\d+)(?:\/|$)/.exec(url);
+  return m ? m[1] : null;
+}
+
+/** Lê o vínculo opcional do ClickUp do repositório. */
+function lerClickUp(raiz) {
+  try {
+    const json = JSON.parse(fs.readFileSync(path.join(raiz, ".specify", "clickup.json"), "utf8"));
+    // O arquivo é commitado: só aceita link do ClickUp coerente com o workspace (é aberto no navegador).
+    return typeof json.url === "string" && workspaceDaUrl(json.url) && workspaceDaUrl(json.url) === json.workspace_id
+      ? { workspace_id: json.workspace_id, url: json.url }
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Grava o vínculo opcional do ClickUp do repositório. */
+function salvarClickUp(raiz, url) {
+  const workspace_id = workspaceDaUrl(url);
+  if (!workspace_id) throw new Error("Link do ClickUp invalido");
+  const objeto = { workspace_id, url };
+  const dir = path.join(raiz, ".specify");
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, "clickup.json"), JSON.stringify(objeto, null, 2) + "\n");
+  return objeto;
+}
+
 const ehCmd = (shell) => /cmd\.exe$/i.test(shell || "");
 const ehPowerShell = (shell) => /pwsh|powershell/i.test(shell || "");
 
@@ -231,5 +262,5 @@ function juntar(comandos, shell) {
 
 module.exports = {
   contarTarefas, etapa, etapaDeArquivos, listarFeatures, featuresOutrasBranches, featureAtual, branchAtual, trilha, repositorios, proximoNumero, slug,
-  comandoAgente, juntar, AGENTES, agente, invocacao, integracoes,
+  comandoAgente, juntar, AGENTES, agente, invocacao, integracoes, workspaceDaUrl, lerClickUp, salvarClickUp,
 };

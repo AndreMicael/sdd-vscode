@@ -50,6 +50,7 @@ function itemRepo(r) {
   const item = new vscode.TreeItem(path.basename(r.dir), vscode.TreeItemCollapsibleState.Expanded);
   const n = r.specKit ? lib.listarFeatures(r.dir).length + outrasBranches(r.dir).length : 0;
   item.description = r.specKit ? `${n} feature${n === 1 ? "" : "s"}` : "sem Spec Kit";
+  if (lib.lerClickUp(r.dir)) item.description += " · ClickUp";
   item.tooltip = r.dir;
   item.iconPath = new vscode.ThemeIcon(r.specKit ? "repo" : "warning");
   item.contextValue = r.specKit ? "repo" : "repoSemSpecKit";
@@ -786,6 +787,18 @@ el("args").addEventListener("keydown", (e) => {
 async function executarPasso(passo, item, form) {
   const f = await escolherFeature(item);
   if (!f) return;
+  if (passo === "taskstoclickup" && !lib.lerClickUp(f.raiz)) {
+    const escolha = await vscode.window.showInformationMessage(
+      "Este repositorio nao tem ClickUp vinculado. Sem ClickUp, basta commitar o codigo normalmente — nada precisa ser enviado.",
+      { modal: true },
+      "Vincular ClickUp",
+      "Seguir sem ClickUp",
+    );
+    if (escolha === "Vincular ClickUp") {
+      await vscode.commands.executeCommand("sdd.vincularClickUp", { raiz: f.raiz, tipo: "repo" });
+    }
+    return;
+  }
   if (passo === "analyze") {
     await rodar(f.raiz, f.dir, "analyze");
     return;
@@ -875,6 +888,47 @@ function activate(ctx) {
       arvore.atualizar();
       status.atualizar();
       form.enviarRepos();
+    }),
+    vscode.commands.registerCommand("sdd.vincularClickUp", async (item) => {
+      let raiz = item?.raiz;
+      if (!raiz) {
+        const escolha = await vscode.window.showQuickPick(
+          raizes().map((r) => ({ label: path.basename(r), description: r, raiz: r })),
+          { placeHolder: "Qual repositorio?" },
+        );
+        raiz = escolha?.raiz;
+      }
+      if (!raiz) return;
+      const atual = lib.lerClickUp(raiz);
+      const url = await vscode.window.showInputBox({
+        prompt: "Cole o link da pasta ou lista do projeto no ClickUp",
+        placeHolder: "https://app.clickup.com/9013.../v/l/f/...",
+        value: atual?.url || "",
+        validateInput: (valor) => lib.workspaceDaUrl(valor) ? null : "Use um link https://app.clickup.com/<workspace>/...",
+      });
+      if (url === undefined) return;
+      try {
+        const vínculo = lib.salvarClickUp(raiz, url);
+        vscode.window.showInformationMessage(`ClickUp vinculado (workspace ${vínculo.workspace_id}). Commite .specify/clickup.json para a equipe usar o mesmo destino.`);
+        atualizar();
+      } catch (e) {
+        vscode.window.showErrorMessage(e instanceof Error ? e.message : String(e));
+      }
+    }),
+    vscode.commands.registerCommand("sdd.abrirClickUp", async (item) => {
+      let raiz = item?.raiz;
+      if (!raiz) {
+        const disponiveis = raizes();
+        raiz = disponiveis.find((r) => lib.lerClickUp(r)) || disponiveis[0];
+      }
+      if (!raiz) return vscode.window.showInformationMessage("Nenhum repositório com Spec Kit aberto.");
+      const vinculo = lib.lerClickUp(raiz);
+      if (vinculo) {
+        await vscode.env.openExternal(vscode.Uri.parse(vinculo.url));
+        return;
+      }
+      const escolha = await vscode.window.showInformationMessage("Este repositorio nao tem ClickUp vinculado.", "Vincular");
+      if (escolha === "Vincular") await vscode.commands.executeCommand("sdd.vincularClickUp", { raiz, tipo: "repo" });
     }),
     vscode.commands.registerCommand("sdd.abrirBranch", async (item) => {
       // Remota: git switch <nome> cria a local rastreando origin/<nome>. Local: o nome exato da branch.
