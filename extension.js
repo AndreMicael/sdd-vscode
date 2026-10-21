@@ -2,6 +2,7 @@
 const vscode = require("vscode");
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 const lib = require("./lib");
 
 const PASSOS = {
@@ -122,42 +123,16 @@ function rodar(raiz, dir, prompt, antes = []) {
 
 /** Instala o Spec Kit no repositório (o init preserva uma constituição já existente). */
 async function instalarSpecKit(raiz) {
+  const usarCursor = vscode.workspace.getConfiguration("sdd").get("agente") === "cursor";
   const ok = await vscode.window.showWarningMessage(
-    `Instalar o Spec Kit em ${path.basename(raiz)}? Ele cria .specify/ e .claude/skills/ no repositório.`,
+    `Instalar o Spec Kit em ${path.basename(raiz)}? Ele cria .specify/ e ${usarCursor ? ".cursor" : ".claude"}/skills/ no repositório.`,
     { modal: true },
     "Instalar",
   );
   if (ok !== "Instalar") return false;
-  const usarCursor = vscode.workspace.getConfiguration("sdd").get("agente") === "cursor";
   terminal(raiz, null, [`specify init --here --integration ${usarCursor ? "cursor-agent" : "claude"} --script ps`]);
   vscode.window.showInformationMessage("Confirme no terminal. Quando terminar, o repositório aparece no painel.");
   return true;
-}
-
-/** Pergunta o repositório sempre que houver mais de um; oferece instalar o Spec Kit se faltar. */
-async function escolherRaiz() {
-  const rs = repos();
-  if (!rs.length) return undefined;
-  const r =
-    rs.length === 1
-      ? rs[0]
-      : (
-          await vscode.window.showQuickPick(
-            rs.map((x) => ({
-              label: path.basename(x.dir),
-              description: x.specKit ? "" : "sem Spec Kit (instalar primeiro)",
-              detail: x.dir,
-              x,
-            })),
-            { placeHolder: "Em qual repositório vai a nova feature?" },
-          )
-        )?.x;
-  if (!r) return undefined;
-  if (!r.specKit) {
-    await instalarSpecKit(r.dir);
-    return undefined;
-  }
-  return r.dir;
 }
 
 async function escolherFeature(item) {
@@ -174,33 +149,265 @@ async function escolherFeature(item) {
   return r?.f;
 }
 
-async function executarPasso(passo, item) {
+function listaRepos() {
+  return repos().map((r) => ({
+    dir: r.dir,
+    nome: path.basename(r.dir) + (r.specKit ? "" : " (sem Spec Kit)"),
+    specKit: r.specKit,
+  }));
+}
+
+class Formulario {
+  constructor() {
+    /** @type {vscode.WebviewView | undefined} */
+    this.view = undefined;
+    /** @type {object | undefined} */
+    this.pendente = undefined;
+  }
+
+  /** @param {vscode.WebviewView} webviewView */
+  resolveWebviewView(webviewView) {
+    this.view = webviewView;
+    webviewView.webview.options = { enableScripts: true };
+    webviewView.webview.html = htmlForm(webviewView.webview);
+    webviewView.webview.onDidReceiveMessage((m) => this.receber(m));
+    this.enviarRepos();
+    if (this.pendente) {
+      webviewView.webview.postMessage(this.pendente);
+      this.pendente = undefined;
+    }
+  }
+
+  /** @param {object} msg */
+  post(msg) {
+    if (this.view) this.view.webview.postMessage(msg);
+    else this.pendente = msg;
+  }
+
+  enviarRepos() {
+    if (!this.view) return;
+    this.view.webview.postMessage({ tipo: "repos", repos: listaRepos() });
+  }
+
+  /** @param {string | undefined} raiz */
+  async abrirNova(raiz) {
+    this.post({ tipo: "nova", raiz: raiz || "" });
+    await vscode.commands.executeCommand("sdd.form.focus");
+  }
+
+  /** @param {string} passo @param {{ raiz: string, dir: string }} f */
+  async abrirPasso(passo, f) {
+    const listaPadrao = vscode.workspace.getConfiguration("sdd").get("listaClickUp") || "";
+    this.post({
+      tipo: "passo",
+      passo,
+      rotulo: PASSOS[passo],
+      feature: path.basename(f.dir),
+      raiz: f.raiz,
+      dir: f.dir,
+      listaPadrao,
+    });
+    await vscode.commands.executeCommand("sdd.form.focus");
+  }
+
+  /** @param {any} m */
+  async receber(m) {
+    if (m.tipo === "criar") {
+      const r = repos().find((x) => x.dir === m.raiz);
+      if (!r) return;
+      if (!r.specKit) {
+        await instalarSpecKit(r.dir);
+        return;
+      }
+      const s = lib.slug(m.nome || "");
+      const antes = s ? [`git switch -c ${lib.proximoNumero(lib.listarFeatures(r.dir))}-${s}`] : [];
+      rodar(r.dir, null, `/speckit-specify ${m.descricao}`, antes);
+      return;
+    }
+    if (m.tipo === "executar") {
+      rodar(m.raiz, m.dir, `/speckit-${m.passo}${m.args ? " " + m.args : ""}`);
+    }
+  }
+}
+
+/** @param {vscode.Webview} webview */
+function htmlForm(webview) {
+  const nonce = crypto.randomBytes(16).toString("base64");
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
+<style>
+  body {
+    font-family: var(--vscode-font-family);
+    padding: 8px;
+    margin: 0;
+    color: var(--vscode-foreground);
+  }
+  label { display: block; margin: 10px 0 4px; }
+  select, input, textarea {
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--vscode-input-background);
+    color: var(--vscode-input-foreground);
+    border: 1px solid var(--vscode-input-border);
+    padding: 4px 6px;
+    font-family: inherit;
+  }
+  textarea { resize: vertical; }
+  .botoes { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+  button {
+    background: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    border: none;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  button:hover { background: var(--vscode-button-hoverBackground); }
+  button.sec {
+    background: transparent;
+    color: var(--vscode-foreground);
+    border: 1px solid var(--vscode-input-border);
+  }
+  #erro { color: var(--vscode-errorForeground); margin-top: 8px; min-height: 1.2em; }
+  h3 { margin: 0 0 8px; font-size: 1em; font-weight: 600; }
+  .oculto { display: none; }
+</style>
+</head>
+<body>
+  <div id="modo-nova">
+    <h3>Nova feature</h3>
+    <label for="repo">Repositório</label>
+    <select id="repo"></select>
+    <label for="descricao">O que você quer construir e por quê? (sem falar de tecnologia)</label>
+    <textarea id="descricao" rows="5" placeholder="ex.: O cidadão precisa baixar o comprovante do PIX de entrada depois de pago"></textarea>
+    <label for="branch">Nome curto da branch (opcional)</label>
+    <input id="branch" type="text" placeholder="ex.: comprovante-pix">
+    <div class="botoes"><button id="criar" type="button">Criar feature</button></div>
+  </div>
+  <div id="modo-passo" class="oculto">
+    <h3 id="titulo-passo"></h3>
+    <p id="nome-feature" style="margin:0 0 8px;opacity:.85"></p>
+    <label for="args" id="label-args">Instruções extras (opcional)</label>
+    <textarea id="args" rows="5"></textarea>
+    <div id="bloco-lista" class="oculto">
+      <label for="lista">Lista do ClickUp</label>
+      <input id="lista" type="text">
+    </div>
+    <div class="botoes">
+      <button id="executar" type="button">Executar</button>
+      <button id="cancelar" type="button" class="sec">Cancelar</button>
+    </div>
+  </div>
+  <div id="erro"></div>
+<script nonce="${nonce}">
+const vscode = acquireVsCodeApi();
+const el = (id) => document.getElementById(id);
+let repos = [];
+let passoAtual = null;
+let featureAtual = null;
+
+function erro(msg) { el("erro").textContent = msg || ""; }
+
+function mostrarNova(raiz) {
+  el("modo-nova").classList.remove("oculto");
+  el("modo-passo").classList.add("oculto");
+  erro("");
+  preencherRepos(raiz || el("repo").value);
+}
+
+function preencherRepos(selecionado) {
+  const sel = el("repo");
+  const atual = selecionado || sel.value;
+  sel.innerHTML = "";
+  for (const r of repos) {
+    const o = document.createElement("option");
+    o.value = r.dir;
+    o.textContent = r.nome;
+    sel.appendChild(o);
+  }
+  if (atual && [...sel.options].some((o) => o.value === atual)) sel.value = atual;
+}
+
+function mostrarPasso(m) {
+  el("modo-nova").classList.add("oculto");
+  el("modo-passo").classList.remove("oculto");
+  erro("");
+  passoAtual = m.passo;
+  featureAtual = { raiz: m.raiz, dir: m.dir };
+  el("titulo-passo").textContent = m.rotulo;
+  el("nome-feature").textContent = m.feature;
+  const clickup = m.passo === "taskstoclickup";
+  el("bloco-lista").classList.toggle("oculto", !clickup);
+  el("args").classList.toggle("oculto", clickup);
+  el("label-args").classList.toggle("oculto", clickup);
+  el("args").value = "";
+  el("args").placeholder = m.passo === "implement" ? "ex.: só a Fase 1" : "Enter para seguir sem instruções";
+  el("lista").value = m.listaPadrao || "";
+}
+
+window.addEventListener("message", (e) => {
+  const m = e.data;
+  if (m.tipo === "repos") {
+    repos = m.repos || [];
+    preencherRepos();
+  } else if (m.tipo === "nova") {
+    mostrarNova(m.raiz);
+  } else if (m.tipo === "passo") {
+    mostrarPasso(m);
+  }
+});
+
+function criar() {
+  const descricao = el("descricao").value.trim();
+  if (!descricao) { erro("Descreva o que você quer construir."); return; }
+  erro("");
+  vscode.postMessage({ tipo: "criar", raiz: el("repo").value, descricao, nome: el("branch").value });
+}
+
+function executar() {
+  if (!passoAtual || !featureAtual) return;
+  const args = passoAtual === "taskstoclickup" ? el("lista").value : el("args").value;
+  vscode.postMessage({ tipo: "executar", passo: passoAtual, raiz: featureAtual.raiz, dir: featureAtual.dir, args });
+}
+
+el("criar").addEventListener("click", criar);
+el("executar").addEventListener("click", executar);
+el("cancelar").addEventListener("click", () => mostrarNova());
+el("descricao").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); criar(); }
+});
+el("args").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); executar(); }
+});
+</script>
+</body>
+</html>`;
+}
+
+async function executarPasso(passo, item, form) {
   const f = await escolherFeature(item);
   if (!f) return;
-  let args = "";
-  if (passo === "taskstoclickup") {
-    const padrao = vscode.workspace.getConfiguration("sdd").get("listaClickUp") || "";
-    const lista = await vscode.window.showInputBox({ prompt: "Lista do ClickUp", value: padrao });
-    if (lista === undefined) return;
-    args = lista;
-  } else if (passo !== "analyze") {
-    const extra = await vscode.window.showInputBox({
-      prompt: `${PASSOS[passo]}: instruções extras (opcional)`,
-      placeHolder: passo === "implement" ? "ex.: só a Fase 1" : "Enter para seguir sem instruções",
-    });
-    if (extra === undefined) return;
-    args = extra;
+  if (passo === "analyze") {
+    rodar(f.raiz, f.dir, "/speckit-analyze");
+    return;
   }
-  rodar(f.raiz, f.dir, `/speckit-${passo}${args ? " " + args : ""}`);
+  await form.abrirPasso(passo, f);
 }
 
 /** @param {vscode.ExtensionContext} ctx */
 function activate(ctx) {
   const arvore = new Arvore();
+  const form = new Formulario();
   let espera;
   const atualizar = () => {
     clearTimeout(espera);
-    espera = setTimeout(() => arvore.atualizar(), 300);
+    espera = setTimeout(() => {
+      arvore.atualizar();
+      form.enviarRepos();
+    }, 300);
   };
   const vigia = vscode.workspace.createFileSystemWatcher("**/{specs/**,.specify/feature.json,.specify/init-options.json}");
   vigia.onDidCreate(atualizar);
@@ -210,38 +417,27 @@ function activate(ctx) {
   ctx.subscriptions.push(
     vigia,
     vscode.window.registerTreeDataProvider("sdd.features", arvore),
-    vscode.commands.registerCommand("sdd.atualizar", () => arvore.atualizar()),
+    vscode.window.registerWebviewViewProvider("sdd.form", form, { webviewOptions: { retainContextWhenHidden: true } }),
+    vscode.commands.registerCommand("sdd.atualizar", () => {
+      arvore.atualizar();
+      form.enviarRepos();
+    }),
     vscode.workspace.onDidChangeWorkspaceFolders(atualizar),
     vscode.commands.registerCommand("sdd.instalarSpecKit", (item) => item?.raiz && instalarSpecKit(item.raiz)),
     vscode.commands.registerCommand("sdd.novaFeature", async (item) => {
-      // "+" na linha do repositório já diz onde; o "+" do topo pergunta.
-      const raiz = item?.tipo === "repo" && item.specKit ? item.raiz : await escolherRaiz();
-      if (!raiz) {
-        if (!repos().length) vscode.window.showWarningMessage("Nenhum repositório git na pasta aberta.");
+      if (!repos().length) {
+        vscode.window.showWarningMessage("Nenhum repositório git na pasta aberta.");
         return;
       }
-      const descricao = await vscode.window.showInputBox({
-        prompt: "O que você quer construir e por quê? (sem falar de tecnologia)",
-        placeHolder: "ex.: O cidadão precisa baixar o comprovante do PIX de entrada depois de pago",
-        ignoreFocusOut: true,
-      });
-      if (!descricao) return;
-      const nome = await vscode.window.showInputBox({
-        prompt: "Nome curto para a branch (Enter para não criar branch)",
-        placeHolder: "ex.: comprovante-pix",
-      });
-      if (nome === undefined) return;
-      const s = lib.slug(nome);
-      const antes = s ? [`git switch -c ${lib.proximoNumero(lib.listarFeatures(raiz))}-${s}`] : [];
-      rodar(raiz, null, `/speckit-specify ${descricao}`, antes);
+      await form.abrirNova(item?.tipo === "repo" ? item.raiz : undefined);
     }),
     vscode.commands.registerCommand("sdd.proximo", async (item) => {
       const f = await escolherFeature(item);
       if (!f) return;
       if (!f.etapa.proximo) return vscode.window.showInformationMessage("Esta feature ainda não tem spec.md.");
-      executarPasso(f.etapa.proximo, f);
+      executarPasso(f.etapa.proximo, f, form);
     }),
-    ...Object.keys(PASSOS).map((p) => vscode.commands.registerCommand(`sdd.${p}`, (item) => executarPasso(p, item))),
+    ...Object.keys(PASSOS).map((p) => vscode.commands.registerCommand(`sdd.${p}`, (item) => executarPasso(p, item, form))),
   );
 }
 
