@@ -1,4 +1,4 @@
-# Specification Quality Checklist: Fechar terminais ao terminar o passo
+# Specification Quality Checklist: Reaproveitar o terminal da feature entre passos
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
 **Created**: 2026-10-21
@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain
+- [x] No [NEEDS CLARIFICATION] markers remain
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -31,4 +31,4 @@
 
 ## Notes
 
-- Pendente: FR-002 (o que conta como "passo terminado") aguarda resposta.
+- Clarificação resolvida (2026-10-21): em vez de fechar, o próximo passo continua no terminal da feature. Todos os itens passam.

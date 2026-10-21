@@ -61,6 +61,7 @@ skills do Spec Kit; a extensão só organiza e chama.
 ## Configuração
 
 - `sdd.agente`: IA padrão (`claude`, `cursor`, `codex`, `opencode`, `agy`). O seletor do painel grava aqui.
+- `sdd.reaproveitarTerminal`: quando ligada, envia o próximo passo da feature para o terminal já aberto para ela (e na mesma sessão da IA, se ainda estiver ativa) e mostra no painel quando o passo termina.
 - `sdd.listaClickUp`: lista sugerida em “Enviar ao ClickUp” (só Claude Code e Cursor têm essa skill).
 - `sdd.layout.colunas`: layout das webviews (`auto`, `1` ou `2`); `auto` usa duas colunas quando houver espaço.
 - `sdd.layout.densidade`: espaçamento (`confortavel` ou `compacta`).
