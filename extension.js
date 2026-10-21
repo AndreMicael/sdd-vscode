@@ -100,6 +100,78 @@ class Arvore {
   }
 }
 
+/** Feature atual para a view "Onde estou": branch → feature.json → última em specs/. */
+function featureStatus() {
+  for (const raiz of raizes()) {
+    const features = lib.listarFeatures(raiz);
+    const branch = lib.branchAtual(raiz);
+    const marcada = lib.featureAtual(raiz);
+    const nome =
+      (branch && features.includes(branch) ? branch : null) ||
+      (marcada && features.includes(path.basename(marcada)) ? path.basename(marcada) : null) ||
+      features[features.length - 1];
+    if (nome) return { raiz, nome, dir: path.join(raiz, "specs", nome) };
+  }
+  return null;
+}
+
+const ARQUIVO_PASSO = { specify: "spec.md", plan: "plan.md", tasks: "tasks.md" };
+
+const ICONES_TRILHA = {
+  feito: "pass-filled",
+  atual: "arrow-right",
+  pendente: "circle-outline",
+  opcional: "circle-large-outline",
+};
+
+class Status {
+  constructor() {
+    this.evento = new vscode.EventEmitter();
+    this.onDidChangeTreeData = this.evento.event;
+  }
+  atualizar() {
+    this.evento.fire(undefined);
+  }
+  getTreeItem(e) {
+    return e;
+  }
+  getChildren(e) {
+    if (e) return [];
+    const f = featureStatus();
+    if (!f) return [];
+    const branch = lib.branchAtual(f.raiz);
+    const topo = new vscode.TreeItem(f.nome, vscode.TreeItemCollapsibleState.None);
+    topo.iconPath = new vscode.ThemeIcon("git-branch");
+    topo.description = path.basename(f.raiz) + (branch ? ` · branch ${branch}` : "");
+    const passos = lib.trilha(f.dir).map((p) => {
+      const label = p.estado === "atual" ? `${p.titulo}  ← você está aqui` : p.titulo;
+      const item = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.None);
+      item.description = p.explicacao;
+      item.tooltip = p.explicacao;
+      item.iconPath =
+        p.estado === "atual"
+          ? new vscode.ThemeIcon("arrow-right", new vscode.ThemeColor("charts.yellow"))
+          : new vscode.ThemeIcon(ICONES_TRILHA[p.estado]);
+      // Etapa feita com arquivo: abre o arquivo; as outras abrem o formulário do passo.
+      if (p.estado === "feito" && ARQUIVO_PASSO[p.passo]) {
+        item.command = {
+          command: "vscode.open",
+          title: "Abrir",
+          arguments: [vscode.Uri.file(path.join(f.dir, ARQUIVO_PASSO[p.passo]))],
+        };
+      } else if (p.passo !== "specify") {
+        item.command = {
+          command: `sdd.${p.passo}`,
+          title: p.titulo,
+          arguments: [itemFeature(f.raiz, f.nome)],
+        };
+      }
+      return item;
+    });
+    return [topo, ...passos];
+  }
+}
+
 /** Abre um terminal no repositório e roda os comandos (o último costuma ser o agente). */
 function terminal(raiz, dir, comandos) {
   const shell = vscode.env.shell;
@@ -435,16 +507,20 @@ async function executarPasso(passo, item, form) {
 /** @param {vscode.ExtensionContext} ctx */
 function activate(ctx) {
   const arvore = new Arvore();
+  const status = new Status();
   const form = new Formulario();
   let espera;
   const atualizar = () => {
     clearTimeout(espera);
     espera = setTimeout(() => {
       arvore.atualizar();
+      status.atualizar();
       form.enviarRepos();
     }, 300);
   };
-  const vigia = vscode.workspace.createFileSystemWatcher("**/{specs/**,.specify/feature.json,.specify/init-options.json}");
+  const vigia = vscode.workspace.createFileSystemWatcher(
+    "**/{specs/**,.specify/feature.json,.specify/init-options.json,.git/HEAD}",
+  );
   vigia.onDidCreate(atualizar);
   vigia.onDidChange(atualizar);
   vigia.onDidDelete(atualizar);
@@ -452,9 +528,11 @@ function activate(ctx) {
   ctx.subscriptions.push(
     vigia,
     vscode.window.registerTreeDataProvider("sdd.features", arvore),
+    vscode.window.registerTreeDataProvider("sdd.status", status),
     vscode.window.registerWebviewViewProvider("sdd.form", form, { webviewOptions: { retainContextWhenHidden: true } }),
     vscode.commands.registerCommand("sdd.atualizar", () => {
       arvore.atualizar();
+      status.atualizar();
       form.enviarRepos();
     }),
     vscode.workspace.onDidChangeWorkspaceFolders(atualizar),

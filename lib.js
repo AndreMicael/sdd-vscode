@@ -44,6 +44,50 @@ function featureAtual(raiz) {
   }
 }
 
+/** Nome da branch em `.git/HEAD` (ref: refs/heads/X), ou null. */
+function branchAtual(raiz) {
+  try {
+    const head = fs.readFileSync(path.join(raiz, ".git", "HEAD"), "utf8").trim();
+    const m = /^ref: refs\/heads\/(.+)$/.exec(head);
+    return m ? m[1] : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Checklist do fluxo Spec Kit na pasta da feature.
+ * estado ∈ feito | atual | pendente | opcional.
+ */
+function trilha(dir) {
+  const tem = (f) => fs.existsSync(path.join(dir, f));
+  const temSpec = tem("spec.md");
+  let clarifications = false;
+  if (temSpec) {
+    clarifications = fs.readFileSync(path.join(dir, "spec.md"), "utf8").includes("## Clarifications");
+  }
+  const t = tem("tasks.md")
+    ? contarTarefas(fs.readFileSync(path.join(dir, "tasks.md"), "utf8"))
+    : { feitas: 0, total: 0 };
+  const implementFeito = t.total > 0 && t.feitas === t.total;
+
+  const passos = [
+    { passo: "specify", titulo: "1. Especificar", explicacao: "O quê e por quê, sem tecnologia → spec.md", estado: temSpec ? "feito" : "pendente" },
+    { passo: "clarify", titulo: "2. Esclarecer (opcional)", explicacao: "A IA pergunta o que ficou ambíguo e anota na spec", estado: clarifications ? "feito" : "opcional" },
+    { passo: "plan", titulo: "3. Planejar", explicacao: "Como fazer: tecnologia, arquivos, dados → plan.md", estado: tem("plan.md") ? "feito" : "pendente" },
+    { passo: "tasks", titulo: "4. Quebrar em tarefas", explicacao: "Lista de tarefas T001, T002… → tasks.md", estado: tem("tasks.md") ? "feito" : "pendente" },
+    { passo: "analyze", titulo: "5. Conferir (opcional)", explicacao: "Checa se spec, plano e tarefas batem entre si", estado: "opcional" },
+    { passo: "implement", titulo: "6. Implementar", explicacao: `Executa as tarefas: ${t.feitas}/${t.total} feitas`, estado: implementFeito ? "feito" : "pendente" },
+    { passo: "converge", titulo: "7. Fechar (converge + PR)", explicacao: "Confere o que falta, abre o PR e liga ao ClickUp", estado: implementFeito ? "atual" : "pendente" },
+  ];
+
+  if (!implementFeito) {
+    const i = passos.findIndex((p) => p.estado !== "feito" && p.estado !== "opcional");
+    if (i >= 0) passos[i].estado = "atual";
+  }
+  return passos;
+}
+
 const temSpecKit = (p) => fs.existsSync(path.join(p, ".specify", "init-options.json"));
 const ehRepo = (p) => fs.existsSync(path.join(p, ".git")) || fs.existsSync(path.join(p, ".specify"));
 
@@ -127,6 +171,6 @@ function juntar(comandos, shell) {
 }
 
 module.exports = {
-  contarTarefas, etapa, listarFeatures, featureAtual, repositorios, proximoNumero, slug, comandoAgente, juntar,
-  AGENTES, agente, invocacao, integracoes,
+  contarTarefas, etapa, listarFeatures, featureAtual, branchAtual, trilha, repositorios, proximoNumero, slug,
+  comandoAgente, juntar, AGENTES, agente, invocacao, integracoes,
 };

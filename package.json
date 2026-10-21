@@ -2,7 +2,7 @@
   "name": "sdd-speckit",
   "displayName": "SDD (Spec Kit)",
   "description": "Painel de features do Spec Kit: etapa de cada feature e botões para os comandos /speckit-* no Claude Code ou no Cursor.",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "publisher": "desenvolve-mt",
   "license": "UNLICENSED",
   "engines": { "vscode": "^1.85.0" },
@@ -16,11 +16,16 @@
     },
     "views": {
       "sdd": [
+        { "id": "sdd.status", "name": "Onde estou" },
         { "id": "sdd.features", "name": "Features" },
         { "type": "webview", "id": "sdd.form", "name": "Ação" }
       ]
     },
     "viewsWelcome": [
+      {
+        "view": "sdd.status",
+        "contents": "Nenhuma feature ainda. Comece criando uma:\n[Nova feature](command:sdd.novaFeature)"
+      },
       {
         "view": "sdd.features",
         "contents": "Nenhum repositório git na pasta aberta. Abra a pasta de um projeto (ou a pasta que contém vários).\n[Nova feature](command:sdd.novaFeature)"

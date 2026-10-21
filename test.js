@@ -77,3 +77,33 @@ test("invocacao e integracoes por IA", () => {
   fs.writeFileSync(path.join(raiz, ".specify", "integration.json"), JSON.stringify({ installed_integrations: ["claude", "cursor-agent"] }));
   assert.deepStrictEqual(lib.integracoes(raiz), ["claude", "cursor-agent"]);
 });
+
+test("trilha: specify atual; com spec+plan → tasks atual; Clarifications → clarify feito", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "sdd-"));
+  let t = lib.trilha(dir);
+  assert.strictEqual(t[0].passo, "specify");
+  assert.strictEqual(t[0].estado, "atual");
+  assert.strictEqual(t[1].estado, "opcional");
+
+  fs.writeFileSync(path.join(dir, "spec.md"), "# Spec\n");
+  fs.writeFileSync(path.join(dir, "plan.md"), "");
+  t = lib.trilha(dir);
+  assert.strictEqual(t.find((p) => p.passo === "specify").estado, "feito");
+  assert.strictEqual(t.find((p) => p.passo === "clarify").estado, "opcional");
+  assert.strictEqual(t.find((p) => p.passo === "plan").estado, "feito");
+  assert.strictEqual(t.find((p) => p.passo === "tasks").estado, "atual");
+
+  fs.writeFileSync(path.join(dir, "spec.md"), "# Spec\n## Clarifications\n");
+  t = lib.trilha(dir);
+  assert.strictEqual(t.find((p) => p.passo === "clarify").estado, "feito");
+});
+
+test("branchAtual lê refs/heads ou devolve null", () => {
+  const raiz = fs.mkdtempSync(path.join(os.tmpdir(), "sdd-"));
+  assert.strictEqual(lib.branchAtual(raiz), null);
+  fs.mkdirSync(path.join(raiz, ".git"));
+  fs.writeFileSync(path.join(raiz, ".git", "HEAD"), "ref: refs/heads/001-foo\n");
+  assert.strictEqual(lib.branchAtual(raiz), "001-foo");
+  fs.writeFileSync(path.join(raiz, ".git", "HEAD"), "abc123def\n");
+  assert.strictEqual(lib.branchAtual(raiz), null);
+});
