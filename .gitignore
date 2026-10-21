@@ -1,2 +1,9 @@
 *.vsix
 node_modules/
+dist/
+build/
+*.log
+.env*
+*.tmp
+.DS_Store
+Thumbs.db

@@ -2,3 +2,10 @@ test.js
 .gitignore
 *.vsix
 instalar.cmd
+test/**
+specs/**
+.agents/**
+.specify/**
+*.log
+*.tmp
+.env*
