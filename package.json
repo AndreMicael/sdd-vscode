@@ -2,13 +2,13 @@
   "name": "sdd-speckit",
   "displayName": "SDD (Spec Kit)",
   "description": "Painel do Spec Kit (SDD): em que passo cada feature está, wiki de cada passo e comandos /speckit-* no Claude Code, Cursor, Codex, OpenCode ou Antigravity.",
-  "version": "0.14.0",
+  "version": "0.16.0",
   "publisher": "desenvolve-mt",
   "license": "UNLICENSED",
   "engines": { "vscode": "^1.85.0" },
   "categories": ["Other"],
   "main": "./extension.js",
-  "activationEvents": ["workspaceContains:.specify/init-options.json", "workspaceContains:*/.specify/init-options.json", "onView:sdd.features"],
+  "activationEvents": ["onStartupFinished", "workspaceContains:.specify/init-options.json", "workspaceContains:*/.specify/init-options.json", "onView:sdd.features"],
   "scripts": { "test": "node --test" },
   "contributes": {
     "viewsContainers": {
@@ -74,6 +74,11 @@
       }
     },
     "commands": [
+      { "command": "sdd.verificarSpecify", "title": "SDD: Verificar Specify" },
+      { "command": "sdd.prepararSpecify", "title": "SDD: Preparar Specify (tentar novamente)" },
+      { "command": "sdd.repararSpecify", "title": "SDD: Reparar Specify" },
+      { "command": "sdd.cancelarSpecify", "title": "SDD: Cancelar preparação do Specify" },
+      { "command": "sdd.diagnosticoSpecify", "title": "SDD: Abrir diagnóstico do Specify" },
       { "command": "sdd.instalarOrq", "title": "SDD: Instalar skills de orquestra\u00e7\u00e3o (/orq)", "icon": "$(hubot)" },
       { "command": "sdd.novaFeature", "title": "SDD: Nova feature", "icon": "$(add)" },
       { "command": "sdd.atualizar", "title": "SDD: Atualizar", "icon": "$(refresh)" },

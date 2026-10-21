@@ -7,6 +7,69 @@ const { execFileSync } = require("child_process");
 const lib = require("./lib");
 const site = require("./site");
 
+function extensionFixture({ ready = false, integrations = [] } = {}) {
+  const vm = require("node:vm");
+  const events = [], handlers = new Map(), terminals = [];
+  const noop = () => {};
+  const disposable = { dispose: noop };
+  const service = { snapshot: { state: "idle" }, check: async () => { events.push("check"); return { state: "ready" }; },
+    ensureReady: async () => { events.push("gate"); return { ready, executable: process.execPath, env: { PATH: "prepared" }, snapshot: { state: "failed" } }; },
+    subscribe: () => disposable, dispose: async () => {}, retry: async () => {}, repair: async () => {}, cancel: async () => {} };
+  const vscode = {
+    env: { shell: "powershell.exe", appName: "Code" },
+    EventEmitter: class { event() {} fire() {} },
+    ProgressLocation: { Notification: 1 }, StatusBarAlignment: { Left: 1 },
+    window: {
+      registerTreeDataProvider: () => { events.push("tree"); return disposable; },
+      registerWebviewViewProvider: () => { events.push("webview"); return disposable; },
+      createOutputChannel: () => ({ appendLine: noop, show: noop, dispose: noop }),
+      createStatusBarItem: () => ({ show: noop, dispose: noop }),
+      withProgress: async (_, callback) => callback({ report: noop }, { onCancellationRequested: () => disposable }),
+      showWarningMessage: async (_, options) => { if (options?.modal) events.push("prompt"); return "Instalar"; },
+      showInformationMessage: async () => {}, showErrorMessage: async () => {},
+      createTerminal: options => { terminals.push(options); return { show: noop, sendText: text => events.push(text) }; },
+      onDidCloseTerminal: () => disposable,
+    },
+    workspace: { workspaceFolders: [], getConfiguration: () => ({ get: () => undefined }),
+      createFileSystemWatcher: () => ({ ...disposable, onDidCreate: noop, onDidChange: noop, onDidDelete: noop }),
+      onDidChangeConfiguration: () => disposable, onDidChangeWorkspaceFolders: () => disposable },
+    commands: { registerCommand: (name, handler) => { handlers.set(name, handler); return disposable; }, executeCommand: noop },
+  };
+  const module = { exports: {} };
+  const source = fs.readFileSync(path.join(__dirname, "extension.js"), "utf8");
+  vm.runInNewContext(source + "\nmodule.exports.testing={rodar,instalarSpecKit};", {
+    module, require: name => name === "vscode" ? vscode : name === "./specify-setup" ? { createSpecifySetup: () => service } :
+      name === "./lib" ? { ...lib, integracoes: () => integrations } : require(name),
+    setTimeout, clearTimeout, process, console, Buffer,
+  });
+  const ctx = { subscriptions: [], environmentVariableCollection: { prepend: noop }, extensionPath: __dirname };
+  return { extension: module.exports, events, handlers, terminals, ctx, service };
+}
+
+test("Specify activation registers UI and recovery commands without workspace before bootstrap", async () => {
+  const f = extensionFixture(); f.extension.activate(f.ctx);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.ok(f.events.indexOf("tree") < f.events.indexOf("check"));
+  for (const command of ["verificarSpecify", "repararSpecify", "prepararSpecify", "cancelarSpecify", "diagnosticoSpecify"]) assert.ok(f.handlers.has(`sdd.${command}`));
+  await f.extension.deactivate();
+});
+
+test("Specify gates block project prompts, terminals and preparatory git commands", async () => {
+  const f = extensionFixture(); f.extension.activate(f.ctx);
+  assert.strictEqual(await f.extension.testing.instalarSpecKit(os.tmpdir()), false);
+  await f.extension.testing.rodar(os.tmpdir(), "/feature", "plan", "", ["git switch branch"]);
+  assert.equal(f.events.includes("prompt"), false); assert.equal(f.terminals.length, 0);
+  await f.extension.deactivate();
+});
+
+test("existing agent integration stays usable and preserves feature environment", async () => {
+  const f = extensionFixture({ integrations: ["claude"] }); f.extension.activate(f.ctx);
+  await f.extension.testing.rodar(os.tmpdir(), "/feature", "plan", "");
+  assert.equal(f.events.includes("gate"), false);
+  assert.equal(f.terminals[0].env.SPECIFY_FEATURE_DIRECTORY, "/feature");
+  await f.extension.deactivate();
+});
+
 test("contarTarefas", () => {
   const t = lib.contarTarefas("- [X] T001 a\n- [x] T002 [P] b\n- [ ] T003 c\n- [ ] sem id\n");
   assert.deepStrictEqual(t, { feitas: 2, total: 3 });
@@ -128,6 +191,10 @@ test("orquestracao e skills", () => {
   fs.mkdirSync(path.join(home, ".claude", "skills", "orq"), { recursive: true });
   fs.writeFileSync(path.join(home, ".claude", "skills", "orq", "SKILL.md"), "# orq\n");
   assert.strictEqual(lib.skillInstalada("orq", home), true);
+  assert.strictEqual(lib.aplicaOrquestracao("claude", "plan", "orq"), true);
+  assert.strictEqual(lib.aplicaOrquestracao("claude", "clarify", "orq"), false);
+  assert.strictEqual(lib.aplicaOrquestracao("cursor", "plan", "orq"), false);
+  assert.strictEqual(lib.aplicaOrquestracao("claude", "plan", "desligada"), false);
 });
 
 test("ClickUp: valida, grava e relê o vínculo", () => {

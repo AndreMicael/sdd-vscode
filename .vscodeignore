@@ -1,7 +1,11 @@
 test.js
+test/**
 .gitignore
 *.vsix
 instalar.cmd
+*.log
+*.tmp
+.env*
 # Arquivos de desenvolvimento (Spec Kit e agentes) não vão no pacote
 .claude/**
 .cursor/**
