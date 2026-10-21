@@ -2,7 +2,7 @@
   "name": "sdd-speckit",
   "displayName": "SDD (Spec Kit)",
   "description": "Painel de features do Spec Kit: etapa de cada feature e botões para os comandos /speckit-* no Claude Code ou no Cursor.",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "publisher": "desenvolve-mt",
   "license": "UNLICENSED",
   "engines": { "vscode": "^1.85.0" },
@@ -31,9 +31,10 @@
       "properties": {
         "sdd.agente": {
           "type": "string",
-          "enum": ["claude", "cursor"],
+          "enum": ["claude", "cursor", "codex", "opencode", "agy"],
+          "enumDescriptions": ["Claude Code", "Cursor (CLI agent)", "Codex (GPT)", "OpenCode", "Antigravity (agy)"],
           "default": "claude",
-          "description": "Agente que recebe os comandos /speckit-*: claude (Claude Code) ou cursor (CLI agent, requer `specify integration install cursor-agent`)."
+          "description": "IA que recebe os comandos do Spec Kit. Se a integração dela não estiver no repositório, a extensão oferece instalar."
         },
         "sdd.listaClickUp": {
           "type": "string",

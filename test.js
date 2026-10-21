@@ -65,3 +65,15 @@ test("comandoAgente escapa aspas por shell", () => {
   assert.strictEqual(lib.juntar(["x", "y"], "C:\\Windows\\System32\\cmd.exe"), "x & y");
   assert.strictEqual(lib.juntar(["x", "y"], "pwsh"), "x; y");
 });
+
+test("invocacao e integracoes por IA", () => {
+  assert.strictEqual(lib.invocacao("claude", "specify", "x"), "/speckit-specify x");
+  assert.strictEqual(lib.invocacao("codex", "plan"), "$speckit-plan");
+  assert.strictEqual(lib.invocacao("opencode", "tasks"), "/speckit.tasks");
+  assert.strictEqual(lib.invocacao("desconhecida", "plan"), "/speckit-plan");
+  const raiz = fs.mkdtempSync(path.join(os.tmpdir(), "sdd-"));
+  assert.deepStrictEqual(lib.integracoes(raiz), []);
+  fs.mkdirSync(path.join(raiz, ".specify"));
+  fs.writeFileSync(path.join(raiz, ".specify", "integration.json"), JSON.stringify({ installed_integrations: ["claude", "cursor-agent"] }));
+  assert.deepStrictEqual(lib.integracoes(raiz), ["claude", "cursor-agent"]);
+});

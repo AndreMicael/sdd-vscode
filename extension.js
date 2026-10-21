@@ -115,22 +115,39 @@ function terminal(raiz, dir, comandos) {
   term.sendText(lib.juntar(comandos, shell));
 }
 
-/** Chama o agente com o comando do Spec Kit. */
-function rodar(raiz, dir, prompt, antes = [], agente) {
-  const usarCursor = (agente ?? vscode.workspace.getConfiguration("sdd").get("agente")) === "cursor";
-  terminal(raiz, dir, [...antes, lib.comandoAgente(usarCursor ? "agent" : "claude", prompt, vscode.env.shell)]);
+const agenteConfig = () => vscode.workspace.getConfiguration("sdd").get("agente") || "claude";
+
+/**
+ * Chama a IA escolhida com o comando do Spec Kit (`passo` = specify, plan...).
+ * Se a integração dessa IA ainda não está no repositório, oferece instalar e não roda.
+ */
+async function rodar(raiz, dir, passo, args, antes = [], id = agenteConfig()) {
+  const a = lib.agente(id);
+  if (!lib.integracoes(raiz).includes(a.integracao)) {
+    const ok = await vscode.window.showWarningMessage(
+      `${a.nome} ainda não tem os comandos do Spec Kit em ${path.basename(raiz)}. Instalar a integração agora?`,
+      { modal: true },
+      "Instalar",
+    );
+    if (ok !== "Instalar") return;
+    // --force: algumas integrações (ex.: agy) não se declaram seguras para conviver com outras.
+    terminal(raiz, null, [`specify integration install ${a.integracao} --script ps --force`]);
+    vscode.window.showInformationMessage("Quando a instalação terminar, clique de novo para rodar o comando.");
+    return;
+  }
+  terminal(raiz, dir, [...antes, lib.comandoAgente(a.exe, lib.invocacao(id, passo, args), vscode.env.shell)]);
 }
 
 /** Instala o Spec Kit no repositório (o init preserva uma constituição já existente). */
-async function instalarSpecKit(raiz, agente) {
-  const usarCursor = (agente ?? vscode.workspace.getConfiguration("sdd").get("agente")) === "cursor";
+async function instalarSpecKit(raiz, id = agenteConfig()) {
+  const a = lib.agente(id);
   const ok = await vscode.window.showWarningMessage(
-    `Instalar o Spec Kit em ${path.basename(raiz)}? Ele cria .specify/ e ${usarCursor ? ".cursor" : ".claude"}/skills/ no repositório.`,
+    `Instalar o Spec Kit em ${path.basename(raiz)} para ${a.nome}? Ele cria .specify/ e os comandos /speckit-* no repositório.`,
     { modal: true },
     "Instalar",
   );
   if (ok !== "Instalar") return false;
-  terminal(raiz, null, [`specify init --here --integration ${usarCursor ? "cursor-agent" : "claude"} --script ps`]);
+  terminal(raiz, null, [`specify init --here --integration ${a.integracao} --script ps`]);
   vscode.window.showInformationMessage("Confirme no terminal. Quando terminar, o repositório aparece no painel.");
   return true;
 }
@@ -189,7 +206,7 @@ class Formulario {
     this.view.webview.postMessage({
       tipo: "repos",
       repos: listaRepos(),
-      agente: vscode.workspace.getConfiguration("sdd").get("agente") || "claude",
+      agente: agenteConfig(),
     });
   }
 
@@ -229,11 +246,11 @@ class Formulario {
       }
       const s = lib.slug(m.nome || "");
       const antes = s ? [`git switch -c ${lib.proximoNumero(lib.listarFeatures(r.dir))}-${s}`] : [];
-      rodar(r.dir, null, `/speckit-specify ${m.descricao}`, antes, m.agente);
+      await rodar(r.dir, null, "specify", m.descricao, antes, m.agente);
       return;
     }
     if (m.tipo === "executar") {
-      rodar(m.raiz, m.dir, `/speckit-${m.passo}${m.args ? " " + m.args : ""}`, [], m.agente);
+      await rodar(m.raiz, m.dir, m.passo, m.args, [], m.agente);
     }
   }
 }
@@ -287,8 +304,7 @@ function htmlForm(webview) {
 <body>
   <label for="agente">IA</label>
   <select id="agente">
-    <option value="claude">Claude Code</option>
-    <option value="cursor">Cursor</option>
+    ${Object.entries(lib.AGENTES).map(([id, a]) => `<option value="${id}">${a.nome}</option>`).join("")}
   </select>
   <div id="modo-nova">
     <h3>Nova feature</h3>
@@ -410,7 +426,7 @@ async function executarPasso(passo, item, form) {
   const f = await escolherFeature(item);
   if (!f) return;
   if (passo === "analyze") {
-    rodar(f.raiz, f.dir, "/speckit-analyze");
+    await rodar(f.raiz, f.dir, "analyze");
     return;
   }
   await form.abrirPasso(passo, f);

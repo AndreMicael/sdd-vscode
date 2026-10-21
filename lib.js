@@ -82,6 +82,35 @@ function slug(texto) {
     .replace(/-+$/, "");
 }
 
+/**
+ * IAs suportadas: `exe` abre a sessão interativa já com o prompt, `integracao` é a chave do
+ * `specify integration`, `prefixo` é como cada uma chama os comandos do Spec Kit.
+ */
+const AGENTES = {
+  claude: { nome: "Claude Code", exe: "claude", integracao: "claude", prefixo: "/speckit-" },
+  cursor: { nome: "Cursor", exe: "agent", integracao: "cursor-agent", prefixo: "/speckit-" },
+  codex: { nome: "Codex (GPT)", exe: "codex", integracao: "codex", prefixo: "$speckit-" },
+  opencode: { nome: "OpenCode", exe: "opencode --prompt", integracao: "opencode", prefixo: "/speckit." },
+  agy: { nome: "Antigravity", exe: "agy -i", integracao: "agy", prefixo: "/speckit-" },
+};
+
+const agente = (id) => AGENTES[id] || AGENTES.claude;
+
+/** Ex.: invocacao("codex", "plan", "só a fase 1") → "$speckit-plan só a fase 1". */
+function invocacao(id, passo, args) {
+  return agente(id).prefixo + passo + (args ? " " + args : "");
+}
+
+/** Integrações do Spec Kit já instaladas no repositório (.specify/integration.json). */
+function integracoes(raiz) {
+  try {
+    const json = JSON.parse(fs.readFileSync(path.join(raiz, ".specify", "integration.json"), "utf8"));
+    return json.installed_integrations || (json.integration ? [json.integration] : []);
+  } catch {
+    return [];
+  }
+}
+
 const ehCmd = (shell) => /cmd\.exe$/i.test(shell || "");
 const ehPowerShell = (shell) => /pwsh|powershell/i.test(shell || "");
 
@@ -97,4 +126,7 @@ function juntar(comandos, shell) {
   return comandos.join(ehCmd(shell) ? " & " : "; ");
 }
 
-module.exports = { contarTarefas, etapa, listarFeatures, featureAtual, repositorios, proximoNumero, slug, comandoAgente, juntar };
+module.exports = {
+  contarTarefas, etapa, listarFeatures, featureAtual, repositorios, proximoNumero, slug, comandoAgente, juntar,
+  AGENTES, agente, invocacao, integracoes,
+};
