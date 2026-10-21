@@ -4,6 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const lib = require("./lib");
+const wiki = require("./wiki");
 
 const PASSOS = {
   clarify: "Clarify (tirar dúvidas da spec)",
@@ -143,6 +144,8 @@ class Status {
     const topo = new vscode.TreeItem(f.nome, vscode.TreeItemCollapsibleState.None);
     topo.iconPath = new vscode.ThemeIcon("git-branch");
     topo.description = path.basename(f.raiz) + (branch ? ` · branch ${branch}` : "");
+    topo.contextValue = "featureStatus";
+    Object.assign(topo, { raiz: f.raiz, dir: f.dir });
     const passos = lib.trilha(f.dir).map((p) => {
       const label = p.estado === "atual" ? `${p.titulo}  ← você está aqui` : p.titulo;
       const item = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.None);
@@ -324,6 +327,269 @@ class Formulario {
     if (m.tipo === "executar") {
       await rodar(m.raiz, m.dir, m.passo, m.args, [], m.agente);
     }
+  }
+}
+
+function esc(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+const SELO = { feito: "✔", atual: "➜", pendente: "○", opcional: "◌" };
+
+/** Arquivo relativo no início de um item de `gera`, se existir em dir. */
+function arquivoGera(dir, texto) {
+  const m = /^([\w./-]+)/.exec(texto);
+  if (!m) return null;
+  let rel = m[1].replace(/\/$/, "");
+  try {
+    return rel && fs.statSync(path.join(dir, rel)).isFile() ? rel : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Arquivos da feature até 2 níveis (pasta + um subnível). */
+function listarArquivosWiki(dir, base = dir, nivel = 0) {
+  try {
+    return fs
+      .readdirSync(dir, { withFileTypes: true })
+      .sort((a, b) => Number(b.isDirectory()) - Number(a.isDirectory()) || a.name.localeCompare(b.name))
+      .flatMap((d) => {
+        const full = path.join(dir, d.name);
+        const rel = path.relative(base, full).split(path.sep).join("/");
+        if (d.isDirectory()) return nivel < 1 ? listarArquivosWiki(full, base, nivel + 1) : [];
+        return [rel];
+      });
+  } catch {
+    return [];
+  }
+}
+
+/** @type {Map<string, vscode.WebviewPanel>} */
+const paineisWiki = new Map();
+
+/** @param {vscode.Webview} webview @param {{ raiz: string, nome: string, dir: string }} f */
+function htmlWiki(webview, f) {
+  const nonce = crypto.randomBytes(16).toString("base64");
+  const trilha = lib.trilha(f.dir);
+  const atual = trilha.find((p) => p.estado === "atual");
+  const progresso = atual
+    ? `Passo ${trilha.indexOf(atual) + 1} de 7 — ${atual.titulo}`
+    : "Concluída";
+  const branch = lib.branchAtual(f.raiz) || "—";
+  const wAtual = atual ? wiki.PASSOS[atual.passo] : null;
+
+  const liGera = (texto) => {
+    const arq = arquivoGera(f.dir, texto);
+    if (!arq) return `<li>${esc(texto)}</li>`;
+    const resto = texto.slice(arq.length);
+    return `<li><a href="#" data-abrir="${esc(arq)}">${esc(arq)}</a>${esc(resto)}</li>`;
+  };
+
+  const blocoPasso = (p) => {
+    const w = wiki.PASSOS[p.passo];
+    if (!w) return "";
+    const aberto = p.estado === "atual" ? " open" : "";
+    return `<details class="passo ${esc(p.estado)}"${aberto}>
+<summary><span class="selo">${SELO[p.estado] || "○"}</span> <strong>${esc(p.titulo)}</strong> — ${esc(w.resumo)}</summary>
+<div class="corpo">
+<p>${esc(w.explicacao)}</p>
+<h4>O que gera</h4><ul>${w.gera.map(liGera).join("")}</ul>
+<h4>Quando usar</h4><p>${esc(w.quando)}</p>
+<h4>Dicas</h4><ul>${w.dicas.map((d) => `<li>${esc(d)}</li>`).join("")}</ul>
+<h4>Erros comuns</h4><ul>${w.erros.map((e) => `<li>${esc(e)}</li>`).join("")}</ul>
+<p>Comando: <code>/${esc(w.comando)}</code></p>
+${p.passo === "specify" ? "" : `<button type="button" data-executar="${esc(p.passo)}">Executar este passo</button>`}
+</div></details>`;
+  };
+
+  let tarefasHtml = "";
+  const tasksPath = path.join(f.dir, "tasks.md");
+  if (fs.existsSync(tasksPath)) {
+    const texto = fs.readFileSync(tasksPath, "utf8");
+    const cont = lib.contarTarefas(texto);
+    const itens = [];
+    const re = /^\s*- \[([ xX])\] (T\d{3,}.*)$/gm;
+    let m;
+    while ((m = re.exec(texto))) {
+      itens.push(`<li>${m[1] !== " " ? "☑" : "☐"} ${esc(m[2])}</li>`);
+    }
+    tarefasHtml = `<section><h2>Tarefas</h2>
+<p>${cont.feitas}/${cont.total} feitas</p>
+<ul class="tarefas">${itens.join("")}</ul></section>`;
+  }
+
+  const arquivos = listarArquivosWiki(f.dir)
+    .map((a) => `<li><a href="#" data-abrir="${esc(a)}">${esc(a)}</a></li>`)
+    .join("");
+
+  const glossario = wiki.GLOSSARIO.map(([t, d]) => `<dt>${esc(t)}</dt><dd>${esc(d)}</dd>`).join("");
+
+  const cardAtual = atual && wAtual
+    ? `<section class="atual"><h2>Onde você está</h2>
+<p><strong>${esc(atual.titulo)}</strong></p>
+<p>${esc(wAtual.resumo)}</p>
+<button type="button" data-executar="${esc(atual.passo)}">Executar ${esc(atual.titulo)}</button>
+</section>`
+    : `<section class="atual"><h2>Onde você está</h2><p>Fluxo concluído — não há passo pendente.</p></section>`;
+
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
+<style>
+  body {
+    font-family: var(--vscode-font-family);
+    color: var(--vscode-foreground);
+    background: var(--vscode-editor-background);
+    margin: 0;
+    padding: 16px;
+    line-height: 1.5;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; }
+  h1 { font-size: 1.4em; margin: 0 0 4px; }
+  h2 { font-size: 1.15em; margin: 28px 0 10px; border-bottom: 1px solid var(--vscode-panel-border, var(--vscode-input-border)); padding-bottom: 4px; }
+  h4 { margin: 12px 0 4px; font-size: .95em; }
+  .meta { opacity: .85; margin: 0 0 8px; }
+  .barra {
+    background: var(--vscode-badge-background);
+    color: var(--vscode-badge-foreground);
+    padding: 6px 10px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-bottom: 8px;
+  }
+  .atual {
+    background: var(--vscode-editor-inactiveSelectionBackground, var(--vscode-input-background));
+    border: 1px solid var(--vscode-focusBorder, var(--vscode-input-border));
+    border-radius: 6px;
+    padding: 12px 14px;
+    margin: 16px 0;
+  }
+  .atual h2 { margin-top: 0; border: none; }
+  details.passo {
+    border: 1px solid var(--vscode-input-border);
+    border-radius: 4px;
+    margin: 8px 0;
+    padding: 0 10px 8px;
+    background: var(--vscode-sideBar-background, transparent);
+  }
+  details.passo.atual { border-color: var(--vscode-focusBorder, var(--vscode-input-border)); }
+  summary { cursor: pointer; padding: 10px 0; }
+  .selo { margin-right: 4px; }
+  .corpo { padding-bottom: 6px; }
+  button {
+    background: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    border: none;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-family: inherit;
+    margin-top: 8px;
+  }
+  button:hover { background: var(--vscode-button-hoverBackground); }
+  a { color: var(--vscode-textLink-foreground); }
+  code {
+    font-family: var(--vscode-editor-font-family, monospace);
+    background: var(--vscode-textCodeBlock-background, var(--vscode-input-background));
+    padding: 1px 4px;
+    border-radius: 3px;
+  }
+  ul { padding-left: 1.2em; }
+  dl { margin: 0; }
+  dt { font-weight: 600; margin-top: 10px; }
+  dd { margin: 2px 0 0 1em; opacity: .9; }
+  .tarefas { list-style: none; padding-left: 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>${esc(f.nome)}</h1>
+    <p class="meta">Repositório: ${esc(path.basename(f.raiz))} · Branch: ${esc(branch)}</p>
+    <div class="barra">${esc(progresso)}</div>
+  </header>
+  ${cardAtual}
+  <section>
+    <h2>O fluxo, passo a passo</h2>
+    ${trilha.map(blocoPasso).join("")}
+  </section>
+  ${tarefasHtml}
+  <section>
+    <h2>Arquivos da feature</h2>
+    <ul>${arquivos || "<li>(nenhum arquivo)</li>"}</ul>
+  </section>
+  <section>
+    <h2>Glossário</h2>
+    <dl>${glossario}</dl>
+  </section>
+</div>
+<script nonce="${nonce}">
+const vscode = acquireVsCodeApi();
+document.addEventListener("click", (e) => {
+  const a = e.target.closest("[data-abrir]");
+  if (a) { e.preventDefault(); vscode.postMessage({ tipo: "abrir", arquivo: a.getAttribute("data-abrir") }); return; }
+  const b = e.target.closest("[data-executar]");
+  if (b) { e.preventDefault(); vscode.postMessage({ tipo: "executar", passo: b.getAttribute("data-executar") }); }
+});
+</script>
+</body>
+</html>`;
+}
+
+/** @param {any} item */
+async function abrirWiki(item) {
+  let f =
+    item?.tipo === "feature" ? item : item?.raiz && item?.dir ? item : featureStatus();
+  if (!f) f = await escolherFeature(undefined);
+  if (!f) return;
+  const feat = { raiz: f.raiz, nome: f.nome || path.basename(f.dir), dir: f.dir };
+
+  const existente = paineisWiki.get(feat.dir);
+  if (existente) {
+    existente.reveal(vscode.ViewColumn.Active);
+    existente.webview.html = htmlWiki(existente.webview, feat);
+    return;
+  }
+
+  const panel = vscode.window.createWebviewPanel(
+    "sdd.wiki",
+    `Wiki: ${feat.nome}`,
+    vscode.ViewColumn.Active,
+    { enableScripts: true, retainContextWhenHidden: true },
+  );
+  paineisWiki.set(feat.dir, panel);
+  panel.onDidDispose(() => paineisWiki.delete(feat.dir));
+  panel.webview.onDidReceiveMessage(async (m) => {
+    if (m.tipo === "executar") {
+      // Não existe sdd.specify: especificar é criar a feature pelo formulário.
+      if (m.passo === "specify") {
+        await vscode.commands.executeCommand("sdd.novaFeature");
+        return;
+      }
+      await vscode.commands.executeCommand("sdd." + m.passo, itemFeature(feat.raiz, feat.nome));
+      return;
+    }
+    if (m.tipo === "abrir" && m.arquivo) {
+      const alvo = path.resolve(feat.dir, m.arquivo);
+      if (!alvo.startsWith(feat.dir + path.sep)) return;
+      await vscode.commands.executeCommand("vscode.open", vscode.Uri.file(alvo));
+    }
+  });
+  panel.webview.html = htmlWiki(panel.webview, feat);
+}
+
+function atualizarPaineisWiki() {
+  for (const [dir, panel] of paineisWiki) {
+    if (!fs.existsSync(dir)) continue;
+    const feat = { raiz: path.dirname(path.dirname(dir)), nome: path.basename(dir), dir };
+    panel.webview.html = htmlWiki(panel.webview, feat);
   }
 }
 
@@ -516,6 +782,7 @@ function activate(ctx) {
       arvore.atualizar();
       status.atualizar();
       form.enviarRepos();
+      atualizarPaineisWiki();
     }, 300);
   };
   const vigia = vscode.workspace.createFileSystemWatcher(
@@ -550,6 +817,7 @@ function activate(ctx) {
       if (!f.etapa.proximo) return vscode.window.showInformationMessage("Esta feature ainda não tem spec.md.");
       executarPasso(f.etapa.proximo, f, form);
     }),
+    vscode.commands.registerCommand("sdd.wiki", (item) => abrirWiki(item)),
     ...Object.keys(PASSOS).map((p) => vscode.commands.registerCommand(`sdd.${p}`, (item) => executarPasso(p, item, form))),
   );
 }
