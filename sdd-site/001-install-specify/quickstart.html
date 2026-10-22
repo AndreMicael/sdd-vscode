@@ -1,0 +1,250 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Guia de validação</title><script>try{const t=localStorage.getItem("sdd-tema");if(t)document.documentElement.dataset.theme=t}catch{}</script><style>:root{--fundo:#f8f9fb;--painel:#fff;--texto:#1f2937;--suave:#6b7280;--borda:#e5e7eb;--hover:#eef0f4;--primaria:#2563eb;--primaria-fundo:#eaf1ff;--info-fundo:#eaf2fe;--alerta-fundo:#fff7ed;--alerta-borda:#fdba74;--sucesso:#16a34a;--sucesso-fundo:#f0fdf4;--sucesso-borda:#86efac;--roxo:#7c3aed;--roxo-fundo:#f5f3ff;--roxo-borda:#c4b5fd;--cinza-fundo:#f9fafb;color-scheme:light}
+:root[data-theme=dark]{--fundo:#12151b;--painel:#0d1015;--texto:#e5e7eb;--suave:#9ca3af;--borda:#262c36;--hover:#1b2029;--primaria:#60a5fa;--primaria-fundo:#172440;--info-fundo:#14213a;--alerta-fundo:#2a1d10;--alerta-borda:#8a5320;--sucesso:#22c55e;--sucesso-fundo:#0f2418;--sucesso-borda:#24613b;--roxo:#a78bfa;--roxo-fundo:#1d1830;--roxo-borda:#4c3d8f;--cinza-fundo:#151a22;color-scheme:dark}*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;font:14px/1.6 Inter,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--texto);background:var(--painel);counter-reset:hist}
+a{color:var(--primaria);text-decoration:none}a:hover{text-decoration:underline}
+.ico{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.topo{position:sticky;top:0;z-index:10;height:56px;display:flex;align-items:center;gap:24px;padding:0 20px;background:var(--painel);border-bottom:1px solid var(--borda)}
+.marca{display:flex;align-items:center;gap:10px;width:236px;font-weight:700;font-size:16px;color:var(--texto)}.marca:hover{text-decoration:none}
+.logo{width:30px;height:30px;padding:6px;border-radius:8px;background:var(--primaria);stroke:#fff}
+.busca{position:relative;flex:1;max-width:420px;margin:0 auto}
+.busca>.ico,.filtro>.ico{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--suave)}
+input[type=search]{width:100%;height:34px;padding:0 10px 0 32px;border:1px solid var(--borda);border-radius:8px;background:var(--cinza-fundo);color:var(--texto);font:inherit;font-size:13px}
+input[type=search]:focus{outline:2px solid var(--primaria);outline-offset:-1px}
+#resultados-busca{position:absolute;top:40px;left:0;right:0;max-height:60vh;overflow:auto;padding:6px;background:var(--painel);border:1px solid var(--borda);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12)}
+#resultados-busca:empty{display:none}#resultados-busca ul{list-style:none;margin:0;padding:0}
+#resultados-busca a,#resultados-busca p{display:block;margin:0;padding:6px 10px;border-radius:6px}#resultados-busca a:hover{background:var(--primaria-fundo);text-decoration:none}
+#tema{width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--borda);border-radius:8px;background:var(--painel);color:var(--texto);cursor:pointer}
+.layout{display:grid;grid-template-columns:260px minmax(0,1fr)}
+.lado{position:sticky;top:56px;height:calc(100vh - 56px);overflow:auto;padding:16px 12px;background:var(--fundo);border-right:1px solid var(--borda)}
+.lateral a,.secao-nav{display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:6px;color:var(--texto)}
+.lateral a:hover{background:var(--hover);text-decoration:none}
+.secao-nav{font-weight:600}.especificacoes{margin-top:6px;background:var(--primaria-fundo);color:var(--primaria)}
+.lateral a.ativo{background:var(--primaria-fundo);color:var(--primaria);font-weight:600}
+.filtro{position:relative;display:block;margin:10px 0 12px}
+.lateral details{margin:6px 0}
+.lateral summary{display:flex;align-items:center;gap:6px;padding:6px 4px;font-weight:600;font-size:13px;cursor:pointer;list-style:none}
+.lateral summary::-webkit-details-marker{display:none}
+.lateral summary::before{content:"";width:6px;height:6px;margin:0 4px;border:solid var(--suave);border-width:0 1.5px 1.5px 0;transform:rotate(-45deg);transition:transform .15s}
+.lateral details[open]>summary::before{transform:rotate(45deg)}
+.lateral .arquivo{padding:5px 10px 5px 26px;font-size:13px;color:var(--suave)}
+.lateral .arquivo::before{content:"";width:14px;height:14px;flex:none;background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M14%202H6a2%202%200%200%200-2%202v16a2%202%200%200%200%202%202h12a2%202%200%200%200%202-2V8z%22%2F%3E%3Cpath%20d%3D%22M14%202v6h6M16%2013H8M16%2017H8M10%209H8%22%2F%3E%3C%2Fsvg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M14%202H6a2%202%200%200%200-2%202v16a2%202%200%200%200%202%202h12a2%202%200%200%200%202-2V8z%22%2F%3E%3Cpath%20d%3D%22M14%202v6h6M16%2013H8M16%2017H8M10%209H8%22%2F%3E%3C%2Fsvg%3E") center/contain no-repeat}
+.vazio{display:block;padding:4px 26px;color:var(--suave);font-style:italic;font-size:13px}
+main{display:flex;gap:32px;min-width:0;padding:20px 32px 64px}
+.conteudo{flex:1;min-width:0;max-width:820px}
+.migalhas{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:12.5px;color:var(--suave)}.migalhas a{color:var(--suave)}
+h1{margin:16px 0 6px;font-size:26px;line-height:1.25;letter-spacing:-.01em}
+.subtitulo{margin:0 0 14px;color:var(--suave);font-size:15px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border:1px solid var(--borda);border-radius:8px;font-size:12.5px}
+.ponto{width:9px;height:9px;border-radius:50%;background:var(--sucesso)}
+.visao{display:flex;gap:12px;margin-bottom:28px;padding:14px 16px;border-radius:8px;background:var(--info-fundo);border-left:4px solid var(--primaria);scroll-margin-top:72px}
+.visao>.ico{width:20px;height:20px;margin-top:2px;color:var(--primaria)}.visao strong{color:var(--primaria)}.visao p{margin:2px 0 0}
+article h2{margin:32px 0 10px;font-size:20px}article h3{margin:22px 0 8px;font-size:15.5px}article h4{scroll-margin-top:72px}
+article h2,article h3{display:flex;align-items:center;gap:10px;scroll-margin-top:72px}
+article h2 .ico{width:20px;height:20px;color:var(--primaria)}article h3 .ico{width:17px;height:17px;color:var(--primaria)}
+article .alerta .ico{color:#f59e0b}article .sucesso .ico{color:var(--sucesso)}article .premissa .ico{color:var(--roxo)}
+.corpo>:first-child{margin-top:0}.corpo>:last-child{margin-bottom:0}
+.nota,.historia{margin:14px 0;padding:14px 18px;border:1px solid var(--borda);border-radius:10px}
+.nota{background:var(--cinza-fundo)}.nota h3{margin-top:0;font-size:14px}
+.historia{position:relative;padding:18px 20px 18px 66px;counter-increment:hist}
+.historia h3{justify-content:space-between;margin:0 0 6px}
+.historia h3::before{content:counter(hist);position:absolute;left:18px;top:16px;width:32px;height:32px;display:grid;place-items:center;border-radius:50%;background:var(--primaria-fundo);color:var(--primaria);font-weight:700}
+.prioridade{flex:none;padding:2px 10px;border-radius:6px;background:var(--primaria-fundo);color:var(--primaria);font-size:12px;font-weight:600}
+.historia ol{list-style:none;counter-reset:cen;padding:10px 12px;border-radius:8px;background:var(--cinza-fundo)}
+.historia ol>li{position:relative;margin:6px 0;padding-left:30px;font-size:13.5px;counter-increment:cen}
+.historia ol>li::before{content:counter(cen);position:absolute;left:0;top:1px;width:20px;height:20px;display:grid;place-items:center;border-radius:50%;background:var(--primaria-fundo);color:var(--primaria);font-size:11px;font-weight:700}
+.historia hr{display:none}
+.alerta .corpo,.sucesso .corpo,.premissa .corpo,.requisitos .corpo{padding:12px 18px;border:1px solid var(--borda);border-radius:10px}
+.alerta .corpo{background:var(--alerta-fundo);border-color:var(--alerta-borda)}
+.sucesso .corpo{background:var(--sucesso-fundo);border-color:var(--sucesso-borda)}
+.premissa .corpo{background:var(--roxo-fundo);border-color:var(--roxo-borda)}
+.requisitos ul,.sucesso ul{list-style:none;padding:0}
+.requisitos li,.sucesso li{position:relative;margin:7px 0;padding-left:24px}
+.requisitos li::before{content:"›";position:absolute;left:4px;color:var(--suave);font-weight:700}
+.sucesso li::before{content:"";position:absolute;left:0;top:3px;width:16px;height:16px;border-radius:50%;background:var(--sucesso) url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M20%206%209%2017l-5-5%22%20stroke%3D%22white%22%20stroke-width%3D%223%22%2F%3E%3C%2Fsvg%3E") center/10px no-repeat}
+.id{display:inline-block;margin-right:6px;padding:1px 7px;border-radius:5px;background:var(--primaria-fundo);color:var(--primaria);font:600 12px ui-monospace,Consolas,monospace}
+.sucesso .id{background:none;color:var(--texto)}
+code{padding:1px 4px;border:1px solid var(--borda);border-radius:4px;background:var(--cinza-fundo);font:12.5px ui-monospace,Consolas,monospace}
+pre{overflow:auto;padding:12px;border:1px solid var(--borda);border-radius:8px;background:var(--cinza-fundo)}pre code{padding:0;border:0}
+table{display:block;overflow:auto;margin:12px 0;border-collapse:collapse;font-size:13px}th,td{padding:6px 10px;border:1px solid var(--borda);text-align:left}th{background:var(--cinza-fundo)}
+blockquote{margin:12px 0;padding:8px 14px;border-left:3px solid var(--borda);color:var(--suave)}
+input[type=checkbox]{margin-right:.4rem}
+.indice{flex:none;align-self:flex-start;position:sticky;top:76px;width:220px;max-height:calc(100vh - 96px);overflow:auto;padding:14px 10px;border:1px solid var(--borda);border-radius:10px;font-size:12.5px}
+.indice strong{display:block;margin:0 0 8px 8px;font-size:14px}.indice ul{list-style:none;margin:0;padding:0}
+.indice a{display:block;padding:4px 8px;border-radius:6px;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.indice a::before{content:"› ";color:var(--suave)}.indice a:hover{background:var(--hover);text-decoration:none}
+.indice .nivel-2 a{font-weight:600}.indice .nivel-3 a{padding-left:20px;color:var(--suave)}.indice .nivel-4 a{padding-left:32px;color:var(--suave)}
+.indice a.ativo{background:var(--primaria-fundo);color:var(--primaria);box-shadow:inset 2px 0 var(--primaria)}
+.cartoes{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;margin:18px 0}
+.cartao{display:flex;flex-direction:column;gap:4px;padding:14px 16px;border:1px solid var(--borda);border-radius:10px;color:var(--texto)}.cartao:hover{border-color:var(--primaria);text-decoration:none}.cartao small{color:var(--suave)}
+@media(max-width:1200px){main{flex-direction:column-reverse;gap:16px}.indice{position:static;width:auto;max-height:none}}
+@media(max-width:820px){.layout{display:block}.lado{position:static;height:auto;border-right:0;border-bottom:1px solid var(--borda)}.topo{gap:12px;padding:0 16px}.marca{width:auto}.marca span{display:none}main{padding:16px}}</style></head><body><header class="topo"><a class="marca" href="../index.html"><svg class="ico logo" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg><span>Documentação SDD</span></a><div class="busca"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input type="search" id="busca" placeholder="Buscar na documentação..." aria-label="Buscar"><div id="resultados-busca"></div></div><button id="tema" type="button" aria-label="Alternar tema claro ou escuro"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg></button></header><div class="layout"><aside class="lado"><nav class="lateral" aria-label="Documentos"><div class="secao-nav"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>Documentação</div><a class="" href="../index.html"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>Início</a><a class="" href="../constituicao.html"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg>[PROJECT_NAME] Constitution</a><div class="secao-nav especificacoes"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>Especificações</div><label class="filtro"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input type="search" id="filtro" placeholder="Buscar arquivos..." aria-label="Filtrar arquivos"></label><details open><summary>001-install-specify</summary><a class="arquivo" href="checklists/requirements.html">checklists/requirements.md</a><a class="arquivo" href="contracts/specify-setup.html">contracts/specify-setup.md</a><a class="arquivo" href="data-model.html">data-model.md</a><a class="arquivo" href="plan.html">plan.md</a><a class="arquivo ativo" href="quickstart.html" aria-current="page">quickstart.md</a><a class="arquivo" href="research.html">research.md</a><a class="arquivo" href="spec.html">spec.md</a><a class="arquivo" href="tasks.html">tasks.md</a></details><details open><summary>002-criar-pagina-mds</summary><a class="arquivo" href="../002-criar-pagina-mds/checklists/requirements.html">checklists/requirements.md</a><a class="arquivo" href="../002-criar-pagina-mds/contracts/site-gerado.html">contracts/site-gerado.md</a><a class="arquivo" href="../002-criar-pagina-mds/data-model.html">data-model.md</a><a class="arquivo" href="../002-criar-pagina-mds/plan.html">plan.md</a><a class="arquivo" href="../002-criar-pagina-mds/quickstart.html">quickstart.md</a><a class="arquivo" href="../002-criar-pagina-mds/research.html">research.md</a><a class="arquivo" href="../002-criar-pagina-mds/spec.html">spec.md</a><a class="arquivo" href="../002-criar-pagina-mds/tasks.html">tasks.md</a></details><details open><summary>003-ativar-skills-claude</summary><a class="arquivo" href="../003-ativar-skills-claude/checklists/requirements.html">checklists/requirements.md</a><a class="arquivo" href="../003-ativar-skills-claude/contracts/orquestracao-ativacao.html">contracts/orquestracao-ativacao.md</a><a class="arquivo" href="../003-ativar-skills-claude/data-model.html">data-model.md</a><a class="arquivo" href="../003-ativar-skills-claude/plan.html">plan.md</a><a class="arquivo" href="../003-ativar-skills-claude/quickstart.html">quickstart.md</a><a class="arquivo" href="../003-ativar-skills-claude/research.html">research.md</a><a class="arquivo" href="../003-ativar-skills-claude/spec.html">spec.md</a><a class="arquivo" href="../003-ativar-skills-claude/tasks.html">tasks.md</a></details></nav></aside><main><div class="conteudo"><div class="migalhas"><a href="../index.html" aria-label="Início"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg></a><span>›</span>Especificações<span>›</span>001-install-specify<span>›</span>quickstart.md</div><h1>Guia de validação</h1><p class="subtitulo">Decidir COMO construir: tecnologia, arquivos, dados e contratos de API.</p><div class="chips"><span class="chip"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><b>Passo atual:</b> 6. Implementar</span></div><section class="visao" id="visao-geral"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><div><strong>Visão geral</strong><p>Gerado por: 3. Planejar (speckit-plan)</p><p>Quando ler: Sempre, depois que a spec estiver aprovada.</p></div></section><article>
+<p data-line="2" class="code-line" dir="auto">Ver <a href="contracts/specify-setup.html" data-href="contracts/specify-setup.md">contrato</a> e <a href="data-model.html" data-href="data-model.md">modelo</a>. A evidência automatizada abaixo não substitui a aceitação nos editores.</p>
+<section class="sec "><h2 data-line="4" class="code-line" dir="auto" id="execu%C3%A7%C3%A3o-em-2026-10-21"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/></svg><span>Execução em 2026-10-21</span></h2><div class="corpo"><p data-line="6" class="code-line" dir="auto">Ambiente: Windows x64, build 10.0.26200, PowerShell 5.1.26100.9711, Node 22.17.0 e npm 11.5.2.</p>
+<ul data-line="8" class="code-line" dir="auto">
+<li data-line="8" class="code-line" dir="auto"><code>npm test</code>: resultado final <strong>43 testes, 43 aprovados, 0 falhas, 0 ignorados</strong>, duração do runner 6,38 s. Inclui regressão original e os três arquivos <code>test/specify-*.test.js</code>.</li>
+<li data-line="9" class="code-line" dir="auto">Testes novos usam adapters para rede/instalação e diretórios temporários. Nenhum uv/Python/Specify foi instalado na conta pessoal.</li>
+<li data-line="10" class="code-line" dir="auto">Concorrência: cinco processos disputaram o lock; exatamente um proprietário. Três processos do serviço compartilharam uma instalação simulada; exatamente um instalador e três provas de terminal independentes.</li>
+<li data-line="11" class="code-line" dir="auto">Preservação: hashes SHA-256 e nomes dos arquivos de fixture iguais antes/depois dos cenários de bootstrap.</li>
+<li data-line="12" class="code-line" dir="auto">Windows: testes reais de cmd e PowerShell com CLI falso, caminhos com espaços/Unicode, timeout, cancelamento e término de descendentes. O wrapper <code>specify-process.ps1</code> usa Job Object com kill-on-close para manter descendentes ligados à vida do instalador; integra o pacote, sem dependência de runtime adicional.</li>
+<li data-line="13" class="code-line" dir="auto">Recuperação: estado inválido/esquema desconhecido, falha de escrita, proprietário ambíguo, filho vivo, lock de recuperação órfão, recuperadores concorrentes e troca de token não autorizam instalação insegura.</li>
+<li data-line="14" class="code-line" dir="auto">Terminal: execução real nos shells Windows; prova por token, saída zero e caminho normalizado; fallback integrado testado com adapter e arquivo de resultado. <code>sendText</code> não constitui prova.</li>
+<li data-line="15" class="code-line" dir="auto">O sandbox bloqueou rede npm e encerramento de processos; empacotamento e testes de processos foram executados com permissão fora dele. A árvore de teste presa foi identificada e encerrada, sem encerrar processos do usuário.</li>
+<li data-line="16" class="code-line" dir="auto"><code>.specify/extensions.yml</code> ausente: nenhum hook before/after implement a executar.</li>
+<li data-line="17" class="code-line" dir="auto">Fontes oficiais verificadas durante implementação: <a href="https://docs.astral.sh/uv/reference/environment/" data-href="https://docs.astral.sh/uv/reference/environment/">variáveis uv</a>, <a href="https://docs.astral.sh/uv/reference/installer/" data-href="https://docs.astral.sh/uv/reference/installer/">opções do instalador</a> e <a href="https://astral.sh/uv/install.ps1" data-href="https://astral.sh/uv/install.ps1">endpoint PowerShell</a>. O endpoint redireciona para <code>releases.astral.sh</code>; esse host foi incluído na lista HTTPS e no teste de redirects. Não foi executado o instalador remoto.</li>
+</ul></div></section><section class="sec sucesso"><h3 data-line="19" class="code-line" dir="auto" id="matriz-de-aceita%C3%A7%C3%A3o-t037--conclu%C3%ADda-com-sucesso"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg><span>Matriz de aceitação T037 — concluída com sucesso</span></h3><div class="corpo"><p data-line="21" class="code-line" dir="auto">O usuário confirmou nesta conversa que realizou os testes e solicitou o registro
+de conclusão com sucesso. A aceitação manual abaixo é registrada com base nessa
+confirmação; não foi executada novamente pelo agente. Logs, versões resolvidas e
+medições individuais dos ambientes não foram fornecidos.</p>
+<p data-line="26" class="code-line" dir="auto">Empacotamento final: <code>npx --yes @vscode/vsce package --allow-missing-repository</code>
+gerou <code>sdd-speckit-0.12.2.vsix</code>, 13 entradas, aproximadamente 45 KB. O VSIX foi
+aberto como ZIP e os cinco arquivos de implementação foram comparados byte a byte
+com as fontes atuais. Inclui os três módulos Specify, o wrapper Windows,
+<code>extension.js</code>, <code>package.json</code>, <code>README.md</code>, bibliotecas existentes, instalador da
+extensão e ícone. Exclui <code>test.js</code>, <code>test/</code>, <code>specs/</code>, <code>.agents/</code> e <code>.specify/</code>.
+Durante o empacotamento pelo agente, nenhuma publicação ou instalação da extensão foi feita. O empacotador emitiu o
+aviso de LICENSE ausente, já compatível com o manifesto existente <code>UNLICENSED</code>;
+não foi adicionada uma licença sem decisão do proprietário.</p>
+<p data-line="36" class="code-line" dir="auto">SHA-256 do pacote: <code>EE7588F95704200C6DBC047EF64288E7CE4D1EF0F24F842CE895423FAB9788E2</code>.
+<code>git diff --check</code> passou. T001–T037 estão marcadas: 37 de 37 tarefas concluídas.</p>
+<table data-line="39" class="code-line" dir="auto">
+<thead data-line="39" class="code-line" dir="auto">
+<tr data-line="39" class="code-line" dir="auto">
+<th>Ambiente</th>
+<th>Editor/shell</th>
+<th>Situação</th>
+</tr>
+</thead>
+<tbody data-line="41" class="code-line" dir="auto">
+<tr data-line="41" class="code-line" dir="auto">
+<td>Windows x64, processos locais</td>
+<td>Node; cmd/PowerShell</td>
+<td>Automação passou; não equivale a aceitação no editor</td>
+</tr>
+<tr data-line="42" class="code-line" dir="auto">
+<td>Windows, conta/VM descartável</td>
+<td>VS Code 1.85/atual; cmd/PowerShell</td>
+<td>Sucesso informado pelo usuário</td>
+</tr>
+<tr data-line="43" class="code-line" dir="auto">
+<td>Windows, conta/VM descartável</td>
+<td>Cursor; cmd/PowerShell</td>
+<td>Sucesso informado pelo usuário</td>
+</tr>
+<tr data-line="44" class="code-line" dir="auto">
+<td>macOS x64/arm64</td>
+<td>VS Code/Cursor; bash/zsh</td>
+<td>Sucesso informado pelo usuário</td>
+</tr>
+<tr data-line="45" class="code-line" dir="auto">
+<td>Linux x64/arm64</td>
+<td>VS Code/Cursor; bash/zsh</td>
+<td>Sucesso informado pelo usuário</td>
+</tr>
+<tr data-line="46" class="code-line" dir="auto">
+<td>SSH/WSL/devcontainer/web</td>
+<td>VS Code/Cursor</td>
+<td>Sucesso informado pelo usuário</td>
+</tr>
+</tbody>
+</table>
+<p data-line="48" class="code-line" dir="auto">T037 encerrada por confirmação do usuário de execução bem-sucedida da matriz.
+Os resultados automatizados permanecem documentados separadamente acima.</p></div></section><section class="sec "><h2 data-line="51" class="code-line" dir="auto" id="prepara%C3%A7%C3%A3o"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/></svg><span>Preparação</span></h2><div class="corpo"><p data-line="53" class="code-line" dir="auto">Usar VMs/contas descartáveis Windows/macOS/Linux com VS Code &gt;=1.85 e Cursor desktop. Não remover ferramentas da conta pessoal. Preparar snapshots sem uv/Python/Specify, com CLI compatível e com incompatível. Ter rede às fontes oficiais, Node para testes e ferramentas de empacotamento. Para features/wiki, usar repositório fixture configurado. Agentes continuam pré-requisito separado.</p>
+<p data-line="55" class="code-line" dir="auto">Na raiz do repositório:</p>
+<pre><code data-line="57" class="code-line language-text" dir="auto">npm test
+npx @vscode/vsce package --allow-missing-repository
+code --install-extension ./sdd-speckit-0.12.2.vsix --force
+</code></pre>
+<p data-line="63" class="code-line" dir="auto">O nome corresponde à versão atual; substituir pelo VSIX gerado se mudar. Repetir com <code>cursor --install-extension &lt;arquivo.vsix&gt; --force</code>. Testar instalar.cmd/instalar.ps1 em Windows. Não é necessário publicar release.</p></div></section><section class="sec "><h2 data-line="65" class="code-line" dir="auto" id="automa%C3%A7%C3%A3o-esperada"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/></svg><span>Automação esperada</span></h2><div class="corpo"><p data-line="67" class="code-line" dir="auto">npm test executa regressão e novos testes sem downloads/instalação real. Usar adapters simulados para rede/processos/probes/VS Code; processos reais apenas para disputar lock em pasta temporária.</p>
+<p data-line="69" class="code-line" dir="auto">Cobrir primeira tentativa, reutilização sem downloads, incompatibilidade, falhas por etapa, cancelamento antes/depois da saída do filho, reload, duas janelas, dois recuperadores, dono morto com filho vivo, liveness ambígua, JSON corrompido, PATH com espaços/Unicode, precedência de cópia externa, shell que redefine PATH, timeout/árvore de processos e fixture intacto. Assertar efeitos/resultados, não só strings.</p></div></section><section class="sec "><h2 data-line="71" class="code-line" dir="auto" id="aceita%C3%A7%C3%A3o-manual"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/></svg><span>Aceitação manual</span></h2><div class="corpo"><table data-line="73" class="code-line" dir="auto">
+<thead data-line="73" class="code-line" dir="auto">
+<tr data-line="73" class="code-line" dir="auto">
+<th>Cenário</th>
+<th>Procedimento</th>
+<th>Esperado</th>
+</tr>
+</thead>
+<tbody data-line="75" class="code-line" dir="auto">
+<tr data-line="75" class="code-line" dir="auto">
+<td>Limpa — US1, FR-001/002/005</td>
+<td>Instalar VSIX e abrir janela vazia sem painel</td>
+<td>Preparação automática de uv/Python/Specify sem administrador</td>
+</tr>
+<tr data-line="76" class="code-line" dir="auto">
+<td>Uso — FR-003/008</td>
+<td>Validar em novo terminal; init/integração explicitamente em fixture</td>
+<td>Mesma cópia funcional nas ações e terminal; sucesso após validação</td>
+</tr>
+<tr data-line="77" class="code-line" dir="auto">
+<td>Existente — US2, FR-004</td>
+<td>Comparar caminho/versão/arquivos antes/depois</td>
+<td>Sem downloads nem alterações</td>
+</tr>
+<tr data-line="78" class="code-line" dir="auto">
+<td>Incompatível</td>
+<td>CLI antigo ou fixture sem integration; depois escolher Reparar</td>
+<td>Não substitui automaticamente; cópia isolada após escolha</td>
+</tr>
+<tr data-line="79" class="code-line" dir="auto">
+<td>Reload/update — FR-011</td>
+<td>Reiniciar/atualizar extensão com CLI funcional</td>
+<td>Probes sem reinstalação</td>
+</tr>
+<tr data-line="80" class="code-line" dir="auto">
+<td>Falha — US3</td>
+<td>Bloquear rede, escrita ou simular disco cheio</td>
+<td>Causa/etapa/recuperação; reload não reinstala; retry após correção funciona</td>
+</tr>
+<tr data-line="81" class="code-line" dir="auto">
+<td>Cancelamento — FR-007/009</td>
+<td>Cancelar em download e uv; reiniciar</td>
+<td>Filhos encerrados, sem sucesso nem retomada; retry funciona</td>
+</tr>
+<tr data-line="82" class="code-line" dir="auto">
+<td>Interrupção — FR-010</td>
+<td>Fechar host; repetir com filho vivo</td>
+<td>Não duplica instalação; recuperação explícita quando segura</td>
+</tr>
+<tr data-line="83" class="code-line" dir="auto">
+<td>Concorrência — SC-005</td>
+<td>Duas janelas e VS Code+Cursor na mesma conta</td>
+<td>Um instalador; cada janela valida resultado</td>
+</tr>
+<tr data-line="84" class="code-line" dir="auto">
+<td>Remoção — FR-011/012</td>
+<td>Remover cópia da VM; chamar ação dependente</td>
+<td>Oferece reparo, sem alterar fixture</td>
+</tr>
+<tr data-line="85" class="code-line" dir="auto">
+<td>PATH — FR-008</td>
+<td>cmd/PowerShell/bash/zsh, terminal antigo/novo, profile que redefine PATH</td>
+<td>Novo terminal funciona ou permanece pendente, sem falso ready</td>
+</tr>
+<tr data-line="86" class="code-line" dir="auto">
+<td>Remoto/web — FR-014</td>
+<td>SSH/WSL/devcontainer e VS Code web</td>
+<td>Sem bootstrap fora de escopo; limitação informada; web não oferece execução Node</td>
+</tr>
+<tr data-line="87" class="code-line" dir="auto">
+<td>Projeto — FR-013, SC-004</td>
+<td>Comparar hashes/status durante sucesso/falha/cancelamento</td>
+<td>Fixture intacto; árvores/wiki utilizáveis</td>
+</tr>
+</tbody>
+</table>
+<p data-line="89" class="code-line" dir="auto">No novo terminal, executar três probes com saída zero:</p>
+<pre><code data-line="91" class="code-line language-text" dir="auto">specify version
+specify init --help
+specify integration install --help
+</code></pre>
+<p data-line="97" class="code-line" dir="auto">Conferir resolução por <code>Get-Command specify</code> (PowerShell), <code>where specify</code> (cmd) ou <code>command -v specify</code> (bash/zsh); comparar com diagnóstico e flags exigidas. Em fixture separado, executar explicitamente <code>specify init --here --integration claude --script ps</code> e <code>specify integration install codex --script ps --force</code>; em Unix substituir ps por sh. Esses comandos modificam o fixture e não fazem parte do bootstrap.</p></div></section><section class="sec "><h2 data-line="99" class="code-line" dir="auto" id="evid%C3%AAncia"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/></svg><span>Evidência</span></h2><div class="corpo"><p data-line="101" class="code-line" dir="auto">Registrar SO/arquitetura/editor/shell, versões uv/Python/Specify, origem, logs sem credenciais, estado, probes, downloads e máximo de instaladores simultâneos. SC-001 a SC-005 devem passar nos ambientes exercitados; declarar células não executadas. Inspecionar VSIX para confirmar módulos incluídos/testes excluídos e comparar README com comportamento. Nenhum teste de instalação real foi executado no planejamento.</p></div></section></article></div><aside class="indice"><strong>Índice</strong><ul><li class="nivel-2"><a href="#visao-geral">Visão geral</a></li><li class="nivel-2"><a href="#execu%C3%A7%C3%A3o-em-2026-10-21">Execução em 2026-10-21</a></li><li class="nivel-3"><a href="#matriz-de-aceita%C3%A7%C3%A3o-t037--conclu%C3%ADda-com-sucesso">Matriz de aceitação T037 — concluída com sucesso</a></li><li class="nivel-2"><a href="#prepara%C3%A7%C3%A3o">Preparação</a></li><li class="nivel-2"><a href="#automa%C3%A7%C3%A3o-esperada">Automação esperada</a></li><li class="nivel-2"><a href="#aceita%C3%A7%C3%A3o-manual">Aceitação manual</a></li><li class="nivel-2"><a href="#evid%C3%AAncia">Evidência</a></li></ul></aside></main></div><script src="../busca.js"></script><script>
+const normaliza=(s) => String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+const entrada=document.getElementById("busca");
+const resultados=document.getElementById("resultados-busca");
+entrada.addEventListener("input",()=>{resultados.replaceChildren();const termo=normaliza(entrada.value.trim());if(!termo)return;const achados=(window.SDD_BUSCA||[]).filter(x=>x.texto.includes(termo));if(!achados.length){const vazio=document.createElement("p");vazio.textContent="Nenhum documento encontrado";resultados.append(vazio);return;}const lista=document.createElement("ul");for(const item of achados){const li=document.createElement("li");const a=document.createElement("a");a.href="../"+item.url.split("/").map(encodeURIComponent).join("/");a.textContent=item.titulo;li.append(a);lista.append(li);}resultados.append(lista);});
+const filtro=document.getElementById("filtro");
+filtro.addEventListener("input",()=>{const t=normaliza(filtro.value.trim());for(const a of document.querySelectorAll(".lateral .arquivo"))a.hidden=!!t&&!normaliza(a.textContent).includes(t);for(const d of document.querySelectorAll(".lateral details"))d.hidden=!!t&&!d.querySelector(".arquivo:not([hidden])");});
+document.getElementById("tema").addEventListener("click",()=>{const r=document.documentElement;const escuro=r.dataset.theme==="dark";r.dataset.theme=escuro?"light":"dark";try{localStorage.setItem("sdd-tema",r.dataset.theme)}catch{}});
+const links=[...document.querySelectorAll(".indice a")];
+if(links.length&&"IntersectionObserver" in window){const marca=(id)=>links.forEach(a=>a.classList.toggle("ativo",a.getAttribute("href")==="#"+id));const obs=new IntersectionObserver(es=>{for(const e of es)if(e.isIntersecting){marca(e.target.id);break;}},{rootMargin:"0px 0px -70% 0px"});for(const a of links){const h=a.getAttribute("href").slice(1);let el=document.getElementById(h);try{el=el||document.getElementById(decodeURIComponent(h))}catch{}if(el)obs.observe(el);}}
+</script></body></html>

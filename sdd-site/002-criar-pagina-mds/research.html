@@ -1,0 +1,165 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Research: Página navegável dos documentos Markdown</title><script>try{const t=localStorage.getItem("sdd-tema");if(t)document.documentElement.dataset.theme=t}catch{}</script><style>:root{--fundo:#f8f9fb;--painel:#fff;--texto:#1f2937;--suave:#6b7280;--borda:#e5e7eb;--hover:#eef0f4;--primaria:#2563eb;--primaria-fundo:#eaf1ff;--info-fundo:#eaf2fe;--alerta-fundo:#fff7ed;--alerta-borda:#fdba74;--sucesso:#16a34a;--sucesso-fundo:#f0fdf4;--sucesso-borda:#86efac;--roxo:#7c3aed;--roxo-fundo:#f5f3ff;--roxo-borda:#c4b5fd;--cinza-fundo:#f9fafb;color-scheme:light}
+:root[data-theme=dark]{--fundo:#12151b;--painel:#0d1015;--texto:#e5e7eb;--suave:#9ca3af;--borda:#262c36;--hover:#1b2029;--primaria:#60a5fa;--primaria-fundo:#172440;--info-fundo:#14213a;--alerta-fundo:#2a1d10;--alerta-borda:#8a5320;--sucesso:#22c55e;--sucesso-fundo:#0f2418;--sucesso-borda:#24613b;--roxo:#a78bfa;--roxo-fundo:#1d1830;--roxo-borda:#4c3d8f;--cinza-fundo:#151a22;color-scheme:dark}*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;font:14px/1.6 Inter,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--texto);background:var(--painel);counter-reset:hist}
+a{color:var(--primaria);text-decoration:none}a:hover{text-decoration:underline}
+.ico{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.topo{position:sticky;top:0;z-index:10;height:56px;display:flex;align-items:center;gap:24px;padding:0 20px;background:var(--painel);border-bottom:1px solid var(--borda)}
+.marca{display:flex;align-items:center;gap:10px;width:236px;font-weight:700;font-size:16px;color:var(--texto)}.marca:hover{text-decoration:none}
+.logo{width:30px;height:30px;padding:6px;border-radius:8px;background:var(--primaria);stroke:#fff}
+.busca{position:relative;flex:1;max-width:420px;margin:0 auto}
+.busca>.ico,.filtro>.ico{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--suave)}
+input[type=search]{width:100%;height:34px;padding:0 10px 0 32px;border:1px solid var(--borda);border-radius:8px;background:var(--cinza-fundo);color:var(--texto);font:inherit;font-size:13px}
+input[type=search]:focus{outline:2px solid var(--primaria);outline-offset:-1px}
+#resultados-busca{position:absolute;top:40px;left:0;right:0;max-height:60vh;overflow:auto;padding:6px;background:var(--painel);border:1px solid var(--borda);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12)}
+#resultados-busca:empty{display:none}#resultados-busca ul{list-style:none;margin:0;padding:0}
+#resultados-busca a,#resultados-busca p{display:block;margin:0;padding:6px 10px;border-radius:6px}#resultados-busca a:hover{background:var(--primaria-fundo);text-decoration:none}
+#tema{width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--borda);border-radius:8px;background:var(--painel);color:var(--texto);cursor:pointer}
+.layout{display:grid;grid-template-columns:260px minmax(0,1fr)}
+.lado{position:sticky;top:56px;height:calc(100vh - 56px);overflow:auto;padding:16px 12px;background:var(--fundo);border-right:1px solid var(--borda)}
+.lateral a,.secao-nav{display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:6px;color:var(--texto)}
+.lateral a:hover{background:var(--hover);text-decoration:none}
+.secao-nav{font-weight:600}.especificacoes{margin-top:6px;background:var(--primaria-fundo);color:var(--primaria)}
+.lateral a.ativo{background:var(--primaria-fundo);color:var(--primaria);font-weight:600}
+.filtro{position:relative;display:block;margin:10px 0 12px}
+.lateral details{margin:6px 0}
+.lateral summary{display:flex;align-items:center;gap:6px;padding:6px 4px;font-weight:600;font-size:13px;cursor:pointer;list-style:none}
+.lateral summary::-webkit-details-marker{display:none}
+.lateral summary::before{content:"";width:6px;height:6px;margin:0 4px;border:solid var(--suave);border-width:0 1.5px 1.5px 0;transform:rotate(-45deg);transition:transform .15s}
+.lateral details[open]>summary::before{transform:rotate(45deg)}
+.lateral .arquivo{padding:5px 10px 5px 26px;font-size:13px;color:var(--suave)}
+.lateral .arquivo::before{content:"";width:14px;height:14px;flex:none;background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M14%202H6a2%202%200%200%200-2%202v16a2%202%200%200%200%202%202h12a2%202%200%200%200%202-2V8z%22%2F%3E%3Cpath%20d%3D%22M14%202v6h6M16%2013H8M16%2017H8M10%209H8%22%2F%3E%3C%2Fsvg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M14%202H6a2%202%200%200%200-2%202v16a2%202%200%200%200%202%202h12a2%202%200%200%200%202-2V8z%22%2F%3E%3Cpath%20d%3D%22M14%202v6h6M16%2013H8M16%2017H8M10%209H8%22%2F%3E%3C%2Fsvg%3E") center/contain no-repeat}
+.vazio{display:block;padding:4px 26px;color:var(--suave);font-style:italic;font-size:13px}
+main{display:flex;gap:32px;min-width:0;padding:20px 32px 64px}
+.conteudo{flex:1;min-width:0;max-width:820px}
+.migalhas{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:12.5px;color:var(--suave)}.migalhas a{color:var(--suave)}
+h1{margin:16px 0 6px;font-size:26px;line-height:1.25;letter-spacing:-.01em}
+.subtitulo{margin:0 0 14px;color:var(--suave);font-size:15px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border:1px solid var(--borda);border-radius:8px;font-size:12.5px}
+.ponto{width:9px;height:9px;border-radius:50%;background:var(--sucesso)}
+.visao{display:flex;gap:12px;margin-bottom:28px;padding:14px 16px;border-radius:8px;background:var(--info-fundo);border-left:4px solid var(--primaria);scroll-margin-top:72px}
+.visao>.ico{width:20px;height:20px;margin-top:2px;color:var(--primaria)}.visao strong{color:var(--primaria)}.visao p{margin:2px 0 0}
+article h2{margin:32px 0 10px;font-size:20px}article h3{margin:22px 0 8px;font-size:15.5px}article h4{scroll-margin-top:72px}
+article h2,article h3{display:flex;align-items:center;gap:10px;scroll-margin-top:72px}
+article h2 .ico{width:20px;height:20px;color:var(--primaria)}article h3 .ico{width:17px;height:17px;color:var(--primaria)}
+article .alerta .ico{color:#f59e0b}article .sucesso .ico{color:var(--sucesso)}article .premissa .ico{color:var(--roxo)}
+.corpo>:first-child{margin-top:0}.corpo>:last-child{margin-bottom:0}
+.nota,.historia{margin:14px 0;padding:14px 18px;border:1px solid var(--borda);border-radius:10px}
+.nota{background:var(--cinza-fundo)}.nota h3{margin-top:0;font-size:14px}
+.historia{position:relative;padding:18px 20px 18px 66px;counter-increment:hist}
+.historia h3{justify-content:space-between;margin:0 0 6px}
+.historia h3::before{content:counter(hist);position:absolute;left:18px;top:16px;width:32px;height:32px;display:grid;place-items:center;border-radius:50%;background:var(--primaria-fundo);color:var(--primaria);font-weight:700}
+.prioridade{flex:none;padding:2px 10px;border-radius:6px;background:var(--primaria-fundo);color:var(--primaria);font-size:12px;font-weight:600}
+.historia ol{list-style:none;counter-reset:cen;padding:10px 12px;border-radius:8px;background:var(--cinza-fundo)}
+.historia ol>li{position:relative;margin:6px 0;padding-left:30px;font-size:13.5px;counter-increment:cen}
+.historia ol>li::before{content:counter(cen);position:absolute;left:0;top:1px;width:20px;height:20px;display:grid;place-items:center;border-radius:50%;background:var(--primaria-fundo);color:var(--primaria);font-size:11px;font-weight:700}
+.historia hr{display:none}
+.alerta .corpo,.sucesso .corpo,.premissa .corpo,.requisitos .corpo{padding:12px 18px;border:1px solid var(--borda);border-radius:10px}
+.alerta .corpo{background:var(--alerta-fundo);border-color:var(--alerta-borda)}
+.sucesso .corpo{background:var(--sucesso-fundo);border-color:var(--sucesso-borda)}
+.premissa .corpo{background:var(--roxo-fundo);border-color:var(--roxo-borda)}
+.requisitos ul,.sucesso ul{list-style:none;padding:0}
+.requisitos li,.sucesso li{position:relative;margin:7px 0;padding-left:24px}
+.requisitos li::before{content:"›";position:absolute;left:4px;color:var(--suave);font-weight:700}
+.sucesso li::before{content:"";position:absolute;left:0;top:3px;width:16px;height:16px;border-radius:50%;background:var(--sucesso) url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M20%206%209%2017l-5-5%22%20stroke%3D%22white%22%20stroke-width%3D%223%22%2F%3E%3C%2Fsvg%3E") center/10px no-repeat}
+.id{display:inline-block;margin-right:6px;padding:1px 7px;border-radius:5px;background:var(--primaria-fundo);color:var(--primaria);font:600 12px ui-monospace,Consolas,monospace}
+.sucesso .id{background:none;color:var(--texto)}
+code{padding:1px 4px;border:1px solid var(--borda);border-radius:4px;background:var(--cinza-fundo);font:12.5px ui-monospace,Consolas,monospace}
+pre{overflow:auto;padding:12px;border:1px solid var(--borda);border-radius:8px;background:var(--cinza-fundo)}pre code{padding:0;border:0}
+table{display:block;overflow:auto;margin:12px 0;border-collapse:collapse;font-size:13px}th,td{padding:6px 10px;border:1px solid var(--borda);text-align:left}th{background:var(--cinza-fundo)}
+blockquote{margin:12px 0;padding:8px 14px;border-left:3px solid var(--borda);color:var(--suave)}
+input[type=checkbox]{margin-right:.4rem}
+.indice{flex:none;align-self:flex-start;position:sticky;top:76px;width:220px;max-height:calc(100vh - 96px);overflow:auto;padding:14px 10px;border:1px solid var(--borda);border-radius:10px;font-size:12.5px}
+.indice strong{display:block;margin:0 0 8px 8px;font-size:14px}.indice ul{list-style:none;margin:0;padding:0}
+.indice a{display:block;padding:4px 8px;border-radius:6px;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.indice a::before{content:"› ";color:var(--suave)}.indice a:hover{background:var(--hover);text-decoration:none}
+.indice .nivel-2 a{font-weight:600}.indice .nivel-3 a{padding-left:20px;color:var(--suave)}.indice .nivel-4 a{padding-left:32px;color:var(--suave)}
+.indice a.ativo{background:var(--primaria-fundo);color:var(--primaria);box-shadow:inset 2px 0 var(--primaria)}
+.cartoes{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;margin:18px 0}
+.cartao{display:flex;flex-direction:column;gap:4px;padding:14px 16px;border:1px solid var(--borda);border-radius:10px;color:var(--texto)}.cartao:hover{border-color:var(--primaria);text-decoration:none}.cartao small{color:var(--suave)}
+@media(max-width:1200px){main{flex-direction:column-reverse;gap:16px}.indice{position:static;width:auto;max-height:none}}
+@media(max-width:820px){.layout{display:block}.lado{position:static;height:auto;border-right:0;border-bottom:1px solid var(--borda)}.topo{gap:12px;padding:0 16px}.marca{width:auto}.marca span{display:none}main{padding:16px}}</style></head><body><header class="topo"><a class="marca" href="../index.html"><svg class="ico logo" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg><span>Documentação SDD</span></a><div class="busca"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input type="search" id="busca" placeholder="Buscar na documentação..." aria-label="Buscar"><div id="resultados-busca"></div></div><button id="tema" type="button" aria-label="Alternar tema claro ou escuro"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg></button></header><div class="layout"><aside class="lado"><nav class="lateral" aria-label="Documentos"><div class="secao-nav"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>Documentação</div><a class="" href="../index.html"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>Início</a><a class="" href="../constituicao.html"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg>[PROJECT_NAME] Constitution</a><div class="secao-nav especificacoes"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>Especificações</div><label class="filtro"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input type="search" id="filtro" placeholder="Buscar arquivos..." aria-label="Filtrar arquivos"></label><details open><summary>001-install-specify</summary><a class="arquivo" href="../001-install-specify/checklists/requirements.html">checklists/requirements.md</a><a class="arquivo" href="../001-install-specify/contracts/specify-setup.html">contracts/specify-setup.md</a><a class="arquivo" href="../001-install-specify/data-model.html">data-model.md</a><a class="arquivo" href="../001-install-specify/plan.html">plan.md</a><a class="arquivo" href="../001-install-specify/quickstart.html">quickstart.md</a><a class="arquivo" href="../001-install-specify/research.html">research.md</a><a class="arquivo" href="../001-install-specify/spec.html">spec.md</a><a class="arquivo" href="../001-install-specify/tasks.html">tasks.md</a></details><details open><summary>002-criar-pagina-mds</summary><a class="arquivo" href="checklists/requirements.html">checklists/requirements.md</a><a class="arquivo" href="contracts/site-gerado.html">contracts/site-gerado.md</a><a class="arquivo" href="data-model.html">data-model.md</a><a class="arquivo" href="plan.html">plan.md</a><a class="arquivo" href="quickstart.html">quickstart.md</a><a class="arquivo ativo" href="research.html" aria-current="page">research.md</a><a class="arquivo" href="spec.html">spec.md</a><a class="arquivo" href="tasks.html">tasks.md</a></details><details open><summary>003-ativar-skills-claude</summary><a class="arquivo" href="../003-ativar-skills-claude/checklists/requirements.html">checklists/requirements.md</a><a class="arquivo" href="../003-ativar-skills-claude/contracts/orquestracao-ativacao.html">contracts/orquestracao-ativacao.md</a><a class="arquivo" href="../003-ativar-skills-claude/data-model.html">data-model.md</a><a class="arquivo" href="../003-ativar-skills-claude/plan.html">plan.md</a><a class="arquivo" href="../003-ativar-skills-claude/quickstart.html">quickstart.md</a><a class="arquivo" href="../003-ativar-skills-claude/research.html">research.md</a><a class="arquivo" href="../003-ativar-skills-claude/spec.html">spec.md</a><a class="arquivo" href="../003-ativar-skills-claude/tasks.html">tasks.md</a></details></nav></aside><main><div class="conteudo"><div class="migalhas"><a href="../index.html" aria-label="Início"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg></a><span>›</span>Especificações<span>›</span>002-criar-pagina-mds<span>›</span>research.md</div><h1>Research: Página navegável dos documentos Markdown</h1><p class="subtitulo">Decidir COMO construir: tecnologia, arquivos, dados e contratos de API.</p><div class="chips"><span class="chip"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><b>Passo atual:</b> 7. Fechar (converge + PR)</span></div><section class="visao" id="visao-geral"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><div><strong>Visão geral</strong><p>Gerado por: 3. Planejar (speckit-plan)</p><p>Quando ler: Sempre, depois que a spec estiver aprovada.</p></div></section><article>
+<section class="sec "><h2 data-line="2" class="code-line" dir="auto" id="1-convers%C3%A3o-de-markdown-em-html"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/></svg><span>1. Conversão de Markdown em HTML</span></h2><div class="corpo"><ul data-line="4" class="code-line" dir="auto">
+<li data-line="4" class="code-line" dir="auto"><strong>Decision</strong>: usar o comando embutido do VS Code <code>markdown.api.render</code> (markdown-it da extensão nativa
+de Markdown), chamado em <code>extension.js</code> e passado como função para <code>site.js</code>.</li>
+<li data-line="6" class="code-line" dir="auto"><strong>Rationale</strong>: o projeto não tem dependências npm; o renderizador já vem com o editor e trata títulos,
+tabelas, listas, código e links. Caixas <code>- [ ]</code>/<code>- [x]</code>/<code>- [X]</code> não viram checkbox nele, então <code>site.js</code>
+troca <code>&lt;li&gt;[ ]</code>/<code>&lt;li&gt;[x]</code>/<code>&lt;li&gt;[X]</code> por <code>&lt;input type=&quot;checkbox&quot; disabled&gt;</code> com uma regex (em bloco de
+código o texto sai escapado, sem <code>&lt;li&gt;</code>, então a regex não o alcança).</li>
+<li data-line="10" class="code-line" dir="auto">Se o comando não existir (extensão Markdown nativa desativada), a geração para com erro antes de
+apagar o site anterior.</li>
+<li data-line="12" class="code-line" dir="auto"><strong>Alternatives considered</strong>: <code>marked</code>/<code>markdown-it</code> como dependência (passaria a empacotar
+<code>node_modules</code>, sem ganho); parser próprio (código demais para tabelas e listas aninhadas).</li>
+</ul></div></section><section class="sec "><h2 data-line="15" class="code-line" dir="auto" id="2-funcionar-sem-servidor-file"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/></svg><span>2. Funcionar sem servidor (<code>file://</code>)</span></h2><div class="corpo"><ul data-line="17" class="code-line" dir="auto">
+<li data-line="17" class="code-line" dir="auto"><strong>Decision</strong>: uma página <code>.html</code> completa por documento, com menu e CSS embutidos; a busca lê um
+<code>busca.js</code> que define <code>window.SDD_BUSCA = [...]</code> carregado por <code>&lt;script src&gt;</code>.</li>
+<li data-line="19" class="code-line" dir="auto"><strong>Rationale</strong>: <code>fetch</code> de JSON local é bloqueado em <code>file://</code>; <code>&lt;script src&gt;</code> relativo funciona.
+Páginas completas (sem roteador JS) dão endereço próprio e botão Voltar de graça (FR-004).</li>
+<li data-line="21" class="code-line" dir="auto"><strong>Alternatives considered</strong>: SPA com hash routes (precisa embutir todo o conteúdo em JS e reimplementar
+rolagem/âncoras); gerador tipo Docusaurus (Node + build, contraria FR-016 e &quot;sem dependência&quot;).</li>
+</ul></div></section><section class="sec "><h2 data-line="24" class="code-line" dir="auto" id="3-endere%C3%A7os-e-acentos"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/></svg><span>3. Endereços e acentos</span></h2><div class="corpo"><ul data-line="26" class="code-line" dir="auto">
+<li data-line="26" class="code-line" dir="auto"><strong>Decision</strong>: o caminho da página espelha o arquivo: <code>specs/&lt;feature&gt;/&lt;rel&gt;.md</code> →
+<code>sdd-site/&lt;feature&gt;/&lt;rel&gt;.html</code>; constituição → <code>sdd-site/constituicao.html</code>. Nome de arquivo mantém
+os acentos; os <code>href</code> usam <code>encodeURIComponent</code> em cada segmento (escapa também <code>#</code>, <code>?</code>, <code>&amp;</code>).</li>
+<li data-line="29" class="code-line" dir="auto"><strong>Rationale</strong>: o caminho é previsível e os links relativos entre <code>.md</code> viram links relativos entre
+<code>.html</code> só trocando a extensão. Sistemas de arquivos atuais e navegadores lidam com UTF-8 no nome.</li>
+<li data-line="31" class="code-line" dir="auto"><strong>Alternatives considered</strong>: slug sem acento (pode colidir <code>ação.md</code> com <code>acao.md</code> e esconde o nome real).</li>
+</ul></div></section><section class="sec "><h2 data-line="33" class="code-line" dir="auto" id="4-links-relativos"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/></svg><span>4. Links relativos</span></h2><div class="corpo"><ul data-line="35" class="code-line" dir="auto">
+<li data-line="35" class="code-line" dir="auto"><strong>Decision</strong>: no HTML gerado, para cada atributo <code>href</code> (precedido de espaço, para não pegar o
+<code>data-href</code> que o VS Code acrescenta) relativo terminado em <code>.md</code> (com ou sem <code>#âncora</code>),
+resolver a partir da pasta do arquivo de origem. Se o destino estiver na lista de documentos, trocar
+por <code>.html</code> relativo; se não, apontar para <code>nao-encontrado.html?doc=&lt;caminho&gt;</code>, que mostra o caminho
+pedido e o menu (FR-006). Links externos e não-<code>.md</code> ficam como estão.</li>
+<li data-line="40" class="code-line" dir="auto"><strong>Rationale</strong>: atende FR-005/FR-006 e o caso de link para outra pasta, com uma única passada de regex
+sobre os <code>href</code>.</li>
+</ul></div></section><section class="sec "><h2 data-line="43" class="code-line" dir="auto" id="5-%C3%ADndice-de-t%C3%ADtulos-toc"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/></svg><span>5. Índice de títulos (TOC)</span></h2><div class="corpo"><ul data-line="45" class="code-line" dir="auto">
+<li data-line="45" class="code-line" dir="auto"><strong>Decision</strong>: depois de renderizar, percorrer <code>&lt;h2&gt;</code>–<code>&lt;h4&gt;</code> com regex, dar <code>id</code> (slug do texto, com
+sufixo <code>-2</code>, <code>-3</code> em repetidos) se ainda não tiver, e montar a lista do índice ao lado do conteúdo.</li>
+<li data-line="47" class="code-line" dir="auto"><strong>Rationale</strong>: não depende de o renderizador gerar <code>id</code>; <code>h1</code> é o título da página e fica fora.</li>
+</ul></div></section><section class="sec "><h2 data-line="49" class="code-line" dir="auto" id="6-tipo-do-documento-e-explica%C3%A7%C3%A3o"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/></svg><span>6. Tipo do documento e explicação</span></h2><div class="corpo"><ul data-line="51" class="code-line" dir="auto">
+<li data-line="51" class="code-line" dir="auto"><strong>Decision</strong>: reaproveitar <code>wiki.PASSOS[*].gera</code>: o tipo de um arquivo é o passo cujo item de <code>gera</code>
+começa pelo caminho relativo dele (<code>spec.md</code>, <code>plan.md</code>, <code>research.md</code>, <code>data-model.md</code>,
+<code>quickstart.md</code>, <code>tasks.md</code>, <code>checklists/requirements.md</code>) ou pela pasta (<code>contracts/</code>). A caixa mostra
+<code>resumo</code> (o que é), o passo/comando (quem gera) e <code>quando</code>. Sem correspondência → sem caixa (FR-009).</li>
+<li data-line="55" class="code-line" dir="auto"><strong>Rationale</strong>: nenhuma tabela nova; se a wiki mudar, o site acompanha. Um teste garante que os 7
+arquivos conhecidos têm tipo, para uma reescrita de <code>gera</code> não apagar a explicação em silêncio (SC-003).</li>
+<li data-line="57" class="code-line" dir="auto"><strong>Alternatives considered</strong>: mapa próprio nome→explicação (duplicaria <code>wiki.js</code>).</li>
+</ul></div></section><section class="sec "><h2 data-line="59" class="code-line" dir="auto" id="7-passo-atual-na-p%C3%A1gina-inicial"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/></svg><span>7. Passo atual na página inicial</span></h2><div class="corpo"><ul data-line="61" class="code-line" dir="auto">
+<li data-line="61" class="code-line" dir="auto"><strong>Decision</strong>: <code>lib.trilha(dir)</code> — o item com <code>estado === &quot;atual&quot;</code> dá o título do passo (ex.:
+&quot;3. Planejar&quot;). <code>trilha</code> sempre marca um passo como atual (no fim, &quot;7. Fechar&quot;). Mesma lógica da
+Wiki da feature (<code>htmlWiki</code>).</li>
+</ul></div></section><section class="sec "><h2 data-line="65" class="code-line" dir="auto" id="8-busca"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/></svg><span>8. Busca</span></h2><div class="corpo"><ul data-line="67" class="code-line" dir="auto">
+<li data-line="67" class="code-line" dir="auto"><strong>Decision</strong>: <code>busca.js</code> com <code>{ titulo, url, texto }</code> por documento (texto = Markdown sem marcação,
+em minúsculas e sem acento). O termo digitado passa pela mesma normalização, então &quot;codigo&quot; acha
+&quot;código&quot;. Caixa de busca no topo do menu; filtra por <code>includes</code> e lista os títulos com link.
+Sem resultado → &quot;Nenhum documento encontrado&quot;.</li>
+<li data-line="71" class="code-line" dir="auto"><strong>Rationale</strong>: centenas de <code>.md</code> cabem em poucos MB; busca linear é instantânea nessa escala.
+<code>shortcut: busca linear por substring, trocar por índice invertido se passar de alguns MB</code>.</li>
+<li data-line="73" class="code-line" dir="auto"><strong>Alternatives considered</strong>: lunr/minisearch (dependência, desnecessária nessa escala).</li>
+</ul></div></section><section class="sec "><h2 data-line="75" class="code-line" dir="auto" id="9-regerar-e-apagar-p%C3%A1ginas-antigas"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/></svg><span>9. Regerar e apagar páginas antigas</span></h2><div class="corpo"><ul data-line="77" class="code-line" dir="auto">
+<li data-line="77" class="code-line" dir="auto"><strong>Decision</strong>: apagar <code>sdd-site/</code> inteira (<code>fs.rmSync(..., { recursive: true, force: true })</code>) antes
+de gravar. Só apagar se a pasta não existir ou contiver o marcador <code>sdd-site/.gerado-pelo-sdd</code>; caso
+contrário, avisar e não gerar.</li>
+<li data-line="80" class="code-line" dir="auto"><strong>Rationale</strong>: FR-012 (arquivos apagados somem) sem diff incremental; o marcador evita apagar uma
+pasta do usuário que por acaso tenha o mesmo nome.</li>
+</ul></div></section><section class="sec "><h2 data-line="83" class="code-line" dir="auto" id="10-seguran%C3%A7a-do-html"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/></svg><span>10. Segurança do HTML</span></h2><div class="corpo"><ul data-line="85" class="code-line" dir="auto">
+<li data-line="85" class="code-line" dir="auto"><strong>Decision</strong>: os títulos, nomes de arquivo e trechos de busca entram escapados (função <code>esc</code> já usada
+em <code>extension.js</code>). O HTML vindo do renderizador é usado como está.</li>
+<li data-line="87" class="code-line" dir="auto"><strong>Rationale</strong>: o conteúdo é do próprio repositório (Assumptions da spec). Risco aceito: HTML cru
+(inclusive <code>&lt;script&gt;</code>) escrito num <code>.md</code> roda no site gerado. Quem publicar o site publica o que está
+nos <code>.md</code> do repositório; sanitizar fica para quando o site for exposto a conteúdo de terceiros.</li>
+</ul></div></section><section class="sec "><h2 data-line="91" class="code-line" dir="auto" id="11-a%C3%A7%C3%A3o-no-painel"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/></svg><span>11. Ação no painel</span></h2><div class="corpo"><ul data-line="93" class="code-line" dir="auto">
+<li data-line="93" class="code-line" dir="auto"><strong>Decision</strong>: comando <code>sdd.gerarSite</code> com ícone no título da view <code>sdd.features</code> e na paleta. Com
+vários repositórios abertos, perguntar qual (<code>showQuickPick</code>, como os comandos que já fazem isso);
+ao terminar, <code>vscode.env.openExternal(Uri.file(sdd-site/index.html))</code> (FR-017).</li>
+</ul></div></section></article></div><aside class="indice"><strong>Índice</strong><ul><li class="nivel-2"><a href="#visao-geral">Visão geral</a></li><li class="nivel-2"><a href="#1-convers%C3%A3o-de-markdown-em-html">1. Conversão de Markdown em HTML</a></li><li class="nivel-2"><a href="#2-funcionar-sem-servidor-file">2. Funcionar sem servidor (file://)</a></li><li class="nivel-2"><a href="#3-endere%C3%A7os-e-acentos">3. Endereços e acentos</a></li><li class="nivel-2"><a href="#4-links-relativos">4. Links relativos</a></li><li class="nivel-2"><a href="#5-%C3%ADndice-de-t%C3%ADtulos-toc">5. Índice de títulos (TOC)</a></li><li class="nivel-2"><a href="#6-tipo-do-documento-e-explica%C3%A7%C3%A3o">6. Tipo do documento e explicação</a></li><li class="nivel-2"><a href="#7-passo-atual-na-p%C3%A1gina-inicial">7. Passo atual na página inicial</a></li><li class="nivel-2"><a href="#8-busca">8. Busca</a></li><li class="nivel-2"><a href="#9-regerar-e-apagar-p%C3%A1ginas-antigas">9. Regerar e apagar páginas antigas</a></li><li class="nivel-2"><a href="#10-seguran%C3%A7a-do-html">10. Segurança do HTML</a></li><li class="nivel-2"><a href="#11-a%C3%A7%C3%A3o-no-painel">11. Ação no painel</a></li></ul></aside></main></div><script src="../busca.js"></script><script>
+const normaliza=(s) => String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+const entrada=document.getElementById("busca");
+const resultados=document.getElementById("resultados-busca");
+entrada.addEventListener("input",()=>{resultados.replaceChildren();const termo=normaliza(entrada.value.trim());if(!termo)return;const achados=(window.SDD_BUSCA||[]).filter(x=>x.texto.includes(termo));if(!achados.length){const vazio=document.createElement("p");vazio.textContent="Nenhum documento encontrado";resultados.append(vazio);return;}const lista=document.createElement("ul");for(const item of achados){const li=document.createElement("li");const a=document.createElement("a");a.href="../"+item.url.split("/").map(encodeURIComponent).join("/");a.textContent=item.titulo;li.append(a);lista.append(li);}resultados.append(lista);});
+const filtro=document.getElementById("filtro");
+filtro.addEventListener("input",()=>{const t=normaliza(filtro.value.trim());for(const a of document.querySelectorAll(".lateral .arquivo"))a.hidden=!!t&&!normaliza(a.textContent).includes(t);for(const d of document.querySelectorAll(".lateral details"))d.hidden=!!t&&!d.querySelector(".arquivo:not([hidden])");});
+document.getElementById("tema").addEventListener("click",()=>{const r=document.documentElement;const escuro=r.dataset.theme==="dark";r.dataset.theme=escuro?"light":"dark";try{localStorage.setItem("sdd-tema",r.dataset.theme)}catch{}});
+const links=[...document.querySelectorAll(".indice a")];
+if(links.length&&"IntersectionObserver" in window){const marca=(id)=>links.forEach(a=>a.classList.toggle("ativo",a.getAttribute("href")==="#"+id));const obs=new IntersectionObserver(es=>{for(const e of es)if(e.isIntersecting){marca(e.target.id);break;}},{rootMargin:"0px 0px -70% 0px"});for(const a of links){const h=a.getAttribute("href").slice(1);let el=document.getElementById(h);try{el=el||document.getElementById(decodeURIComponent(h))}catch{}if(el)obs.observe(el);}}
+</script></body></html>
