@@ -305,3 +305,19 @@ test("gerarSite monta páginas, checkboxes e busca em memória", async () => {
   assert.match(arquivos.get("busca.js"), /codigo/);
   assert.match(arquivos.get("nao-encontrado.html"), /textContent/);
 });
+
+test("gerarSite vira cabeçalho em chips e agrupa seções do spec", async () => {
+  const raiz = fs.mkdtempSync(path.join(os.tmpdir(), "sdd-site-"));
+  fs.mkdirSync(path.join(raiz, "specs", "001-a"), { recursive: true });
+  fs.writeFileSync(path.join(raiz, "specs", "001-a", "spec.md"), "# Spec\n\n**Status**: Draft\n\n## Parte\n");
+  let recebido = "";
+  const arquivos = await site.gerarSite(raiz, (md) => { recebido = md; return '<h1>Spec</h1><h2>User Scenarios &amp; Testing</h2><h3>User Story 1 - X (Priority: P1)</h3><p>a</p><h3>Edge Cases</h3><ul><li><strong>FR-001</strong>: b</li></ul>'; });
+  const spec = arquivos.get("001-a/spec.html");
+  assert.doesNotMatch(recebido, /Status/);
+  assert.match(spec, /<b>Status:<\/b> Draft/);
+  assert.match(spec, /class="sec historia"[\s\S]*Prioridade: P1/);
+  assert.match(spec, /class="sec alerta"/);
+  assert.match(spec, /<span class="id">FR-001<\/span>/);
+  assert.match(spec, />User Scenarios &amp; Testing<\/a>/);
+  assert.strictEqual(spec.match(/<h1/g).length, 1);
+});
