@@ -5,6 +5,7 @@ const os = require("os");
 const path = require("path");
 const { execFileSync } = require("child_process");
 const lib = require("./lib");
+const site = require("./site");
 
 function extensionFixture({ ready = false, integrations = [] } = {}) {
   const vm = require("node:vm");
@@ -251,4 +252,56 @@ test("comMarcador e temMarcador", () => {
   assert.strictEqual(lib.temMarcador("pronto\nPronto\nAPRONTOU\nPRONTOS"), false);
   assert.strictEqual(lib.temMarcador("Tudo certo.\nPRONTO\n"), true);
   assert.strictEqual(lib.temMarcador("\x1b]633;C\x07\x1b[1;32mPRONTO\x1b[0m\r\n"), true);
+});
+
+test("site lista documentos, features vazias e href codificado", () => {
+  const raiz = fs.mkdtempSync(path.join(os.tmpdir(), "sdd-site-"));
+  fs.mkdirSync(path.join(raiz, "specs", "001-a", "contracts"), { recursive: true });
+  fs.mkdirSync(path.join(raiz, "specs", "002-vazia"), { recursive: true });
+  fs.writeFileSync(path.join(raiz, "specs", "001-a", "contracts", "anotação.md"), "# Título\n");
+  const dados = site.listarDocumentos(raiz);
+  assert.deepStrictEqual(dados.features.map((f) => f.nome), ["001-a", "002-vazia"]);
+  assert.deepStrictEqual(dados.features[0].documentos[0], {
+    origem: "specs/001-a/contracts/anotação.md", rel: "contracts/anotação.md", destino: "001-a/contracts/anotação.html",
+    titulo: "Título", markdown: "# Título\n", tipo: "plan", passo: "3. Planejar",
+  });
+  assert.strictEqual(dados.features[1].documentos.length, 0);
+  assert.strictEqual(site.href("001-a/contracts/anotação.html", "index.html"), "001-a/contracts/anota%C3%A7%C3%A3o.html");
+});
+
+test("site reconhece tipos, reescreve links e cria índice", () => {
+  for (const nome of ["spec.md", "plan.md", "research.md", "data-model.md", "quickstart.md", "tasks.md", "checklists/requirements.md", "contracts/x.md"]) {
+    assert.ok(site.tipoDoDocumento(nome));
+  }
+  assert.strictEqual(site.tipoDoDocumento("notas.md"), null);
+  const doc = { origem: "specs/001-a/spec.md", destino: "001-a/spec.html" };
+  const destinos = new Map([["specs/001-a/plan.md", "001-a/plan.html"], ["specs/002-b/spec.md", "002-b/spec.html"]]);
+  const html = site.reescreverLinks('<a href="plan.md#sec">x</a><a data-href="plan.md" href="https://x">x</a><a href="../002-b/spec.md">o</a><a href="nada.md">n</a>', doc, destinos);
+  assert.match(html, /href="plan\.html#sec"/);
+  assert.match(html, /href="\.\.\/002-b\/spec\.html"/);
+  assert.match(html, /href="\.\.\/nao-encontrado\.html\?doc=specs%2F001-a%2Fnada\.md"/);
+  assert.match(html, /data-href="plan\.md"/);
+  const toc = site.indice("<h2>Repetido</h2><h2>Repetido</h2>");
+  assert.match(toc.html, /id="repetido"/);
+  assert.match(toc.html, /id="repetido-2"/);
+});
+
+test("gerarSite monta páginas, checkboxes e busca em memória", async () => {
+  const raiz = fs.mkdtempSync(path.join(os.tmpdir(), "sdd-site-"));
+  fs.mkdirSync(path.join(raiz, "specs", "001-a"), { recursive: true });
+  fs.mkdirSync(path.join(raiz, ".specify", "memory"), { recursive: true });
+  fs.writeFileSync(path.join(raiz, "specs", "001-a", "spec.md"), "# Spec\nCódigo e terminal\n");
+  fs.writeFileSync(path.join(raiz, ".specify", "memory", "constitution.md"), "# Constituição\n");
+  const arquivos = await site.gerarSite(raiz, () => '<h1>Spec</h1><ul><li>[ ] a</li><li data-line="2" class="code-line"><p data-line="2">[x] b</p></li><li>[X] c</li></ul>');
+  assert.ok(arquivos.has("index.html"));
+  assert.ok(arquivos.has("constituicao.html"));
+  assert.ok(arquivos.has(".gerado-pelo-sdd"));
+  const spec = arquivos.get("001-a/spec.html");
+  assert.strictEqual(spec.match(/type="checkbox" disabled/g).length, 3);
+  assert.strictEqual(spec.match(/disabled checked/g).length, 2);
+  assert.match(spec, /Gerado por: 1\. Especificar \(speckit-specify\)/);
+  assert.match(arquivos.get("index.html"), /href="constituicao\.html"/);
+  assert.match(arquivos.get("busca.js"), /^window\.SDD_BUSCA = /);
+  assert.match(arquivos.get("busca.js"), /codigo/);
+  assert.match(arquivos.get("nao-encontrado.html"), /textContent/);
 });
