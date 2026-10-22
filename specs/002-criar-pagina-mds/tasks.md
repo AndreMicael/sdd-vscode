@@ -106,7 +106,7 @@ description: "Task list for feature implementation: Página navegável dos docum
 ## Phase 6: Polish & Cross-Cutting Concerns
 
 - [X] T019 [P] Em `README.md`, documentar em poucas linhas o comando "SDD: Gerar site da documentação", a pasta `sdd-site/` (o marcador `.gerado-pelo-sdd`; versionar ou não é decisão do time) e o risco aceito de HTML cru dos `.md` rodar no site (research §10).
-- [ ] T020 Rodar `npm test` e todos os cenários de `quickstart.md` (1–9), desfazendo os arquivos de teste dos passos 4, 7 e 8 ao terminar.
+- [X] T020 Rodar `npm test` e todos os cenários de `quickstart.md` (1–9), desfazendo os arquivos de teste dos passos 4, 7 e 8 ao terminar.
 
 ---
 
@@ -165,3 +165,10 @@ Task: "T010 Acrescentar comando e botão em package.json"
 - `site.js` monta tudo em memória; o site anterior só é apagado depois que a geração deu certo e o marcador foi conferido.
 - Títulos, nomes de arquivo e textos de busca entram escapados; o HTML do renderizador é usado como está (risco aceito, research §10).
 - Commit por tarefa ou grupo lógico.
+
+---
+
+## Phase 7: Convergence
+
+- [X] T021 Em `site.js` (`gerarSite`), mostrar na caixa de tipo o passo que gera o arquivo pelo título do passo (ex.: "1. Especificar", na mesma ordem de `wiki.PASSOS`/`lib.trilha`) além do comando, em vez de só `speckit-specify` per FR-008 / SC-008 (partial)
+- [X] T022 Em `site.js` (`pagina`), exibir o índice de títulos (`.indice`) ao lado do conteúdo (CSS, à direita em telas largas) em vez de acima do texto per FR-007 / quickstart cenário 3 (partial)

@@ -24,12 +24,14 @@ function listarDocumentos(raiz) {
     };
     visitar(dir);
     arquivos.sort();
+    const trilha = lib.trilha(dir);
     const documentos = arquivos.map((origemAbsoluta) => {
       const rel = posix(path.relative(dir, origemAbsoluta));
       const markdown = fs.readFileSync(origemAbsoluta, "utf8");
-      return { origem: posix(path.relative(raiz, origemAbsoluta)), rel, destino: `${nome}/${rel.slice(0, -2)}html`, titulo: titulo(markdown, rel), markdown, tipo: tipoDoDocumento(rel) };
+      const tipo = tipoDoDocumento(rel);
+      return { origem: posix(path.relative(raiz, origemAbsoluta)), rel, destino: `${nome}/${rel.slice(0, -2)}html`, titulo: titulo(markdown, rel), markdown, tipo, passo: trilha.find((p) => p.passo === tipo)?.titulo || null };
     });
-    const atual = lib.trilha(dir).find((p) => p.estado === "atual");
+    const atual = trilha.find((p) => p.estado === "atual");
     return { nome, passoAtual: atual?.titulo || "", documentos };
   });
   const constituicaoAbsoluta = path.join(raiz, ".specify", "memory", "constitution.md");
@@ -77,7 +79,7 @@ function normalizaScript() {
 
 function pagina({ titulo, menu: menuHtml, corpo, raizRel }) {
   const buscaScript = `${raizRel}busca.js`;
-  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${lib.esc(titulo)}</title><style>body{font-family:system-ui,sans-serif;display:flex;gap:2rem;max-width:1200px;margin:auto;padding:1rem;color:#222}nav{width:18rem;flex:none}nav ul{padding-left:1.2rem}nav li{margin:.35rem 0}.vazio{color:#777;font-style:italic}main{min-width:0;flex:1}a{color:#06c}table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:.3rem}input[type=checkbox]{margin-right:.4rem}#resultados-busca{margin:.5rem 0}</style></head><body><aside>${menuHtml}</aside><main><h1>${lib.esc(titulo)}</h1>${corpo}</main><script src="${lib.esc(buscaScript)}"></script><script>
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${lib.esc(titulo)}</title><style>body{font-family:system-ui,sans-serif;display:flex;gap:2rem;max-width:1200px;margin:auto;padding:1rem;color:#222}nav{width:18rem;flex:none}nav ul{padding-left:1.2rem}nav li{margin:.35rem 0}.vazio{color:#777;font-style:italic}main{min-width:0;flex:1}a{color:#06c}table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:.3rem}input[type=checkbox]{margin-right:.4rem}#resultados-busca{margin:.5rem 0}.indice{float:right;width:14rem;margin:0 0 1rem 1.5rem;padding-left:1rem;border-left:1px solid #ddd}@media(max-width:900px){.indice{float:none;width:auto;margin:0 0 1rem;padding:0;border:0}}</style></head><body><aside>${menuHtml}</aside><main><h1>${lib.esc(titulo)}</h1>${corpo}</main><script src="${lib.esc(buscaScript)}"></script><script>
 const normaliza=${normalizaScript()};
 const entrada=document.querySelector('input[type="search"]');
 const resultados=document.getElementById("resultados-busca");
@@ -126,7 +128,7 @@ async function gerarSite(raiz, render) {
     html = reescreverLinks(html, doc, destinos);
     const toc = indice(html);
     const tipo = doc.tipo ? wiki.PASSOS[doc.tipo] : null;
-    const caixa = tipo ? `<section class="tipo"><strong>${lib.esc(tipo.resumo)}</strong><p>Gerado por: ${lib.esc(tipo.comando)}</p><p>Quando ler: ${lib.esc(tipo.quando)}</p></section>` : "";
+    const caixa = tipo ? `<section class="tipo"><strong>${lib.esc(tipo.resumo)}</strong><p>Gerado por: ${lib.esc(doc.passo ? `${doc.passo} (${tipo.comando})` : tipo.comando)}</p><p>Quando ler: ${lib.esc(tipo.quando)}</p></section>` : "";
     const destino = doc.destino;
     const rel = path.posix.dirname(destino) === "." ? "" : "../".repeat(destino.split("/").length - 1);
     saida.set(destino, pagina({ titulo: doc.titulo, menu: menu(dados.features, dados.constituicao, destino), corpo: `${caixa}${toc.toc}<article>${toc.html}</article>`, raizRel: rel }));

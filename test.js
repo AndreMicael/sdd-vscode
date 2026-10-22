@@ -263,7 +263,7 @@ test("site lista documentos, features vazias e href codificado", () => {
   assert.deepStrictEqual(dados.features.map((f) => f.nome), ["001-a", "002-vazia"]);
   assert.deepStrictEqual(dados.features[0].documentos[0], {
     origem: "specs/001-a/contracts/anotação.md", rel: "contracts/anotação.md", destino: "001-a/contracts/anotação.html",
-    titulo: "Título", markdown: "# Título\n", tipo: "plan",
+    titulo: "Título", markdown: "# Título\n", tipo: "plan", passo: "3. Planejar",
   });
   assert.strictEqual(dados.features[1].documentos.length, 0);
   assert.strictEqual(site.href("001-a/contracts/anotação.html", "index.html"), "001-a/contracts/anota%C3%A7%C3%A3o.html");
@@ -299,6 +299,7 @@ test("gerarSite monta páginas, checkboxes e busca em memória", async () => {
   const spec = arquivos.get("001-a/spec.html");
   assert.strictEqual(spec.match(/type="checkbox" disabled/g).length, 3);
   assert.strictEqual(spec.match(/disabled checked/g).length, 2);
+  assert.match(spec, /Gerado por: 1\. Especificar \(speckit-specify\)/);
   assert.match(arquivos.get("index.html"), /href="constituicao\.html"/);
   assert.match(arquivos.get("busca.js"), /^window\.SDD_BUSCA = /);
   assert.match(arquivos.get("busca.js"), /codigo/);
